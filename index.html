@@ -1,88 +1,9 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Hackénia — Prototype 0.2.1</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <section id="create" class="screen">
-    <div class="card">
-      <div class="brand">HACKÉNIA</div>
-      <h1>Crée ton aventurier</h1>
-      <p class="lead">Prototype 0.2.1 — création de personnage, actions libres et jets de dés animés.</p>
-
-      <div class="grid3">
-        <label>Nom
-          <input id="name" value="Aldren" maxlength="24">
-        </label>
-        <label>Race
-          <select id="race">
-            <option>Humain</option><option>Elfe</option><option>Nain</option>
-            <option>Gnome</option><option>Demi-orc</option><option>Tieffelin</option>
-          </select>
-        </label>
-        <label>Classe
-          <select id="klass">
-            <option>Guerrier</option><option>Magicien</option><option>Barde</option>
-            <option>Clerc</option><option>Rôdeur</option><option>Roublard</option><option>Paladin</option>
-          </select>
-        </label>
-      </div>
-
-      <p class="sub">Caractéristiques</p>
-      <div id="stats" class="stats"></div>
-
-      <button id="start" class="primary">Commencer</button>
-      <p id="startupError" class="error"></p>
-    </div>
-  </section>
-
-  <section id="game" class="screen" hidden>
-    <header>
-      <div>
-        <div class="brand smallbrand">HACKÉNIA • 0.2.1</div>
-        <h2 id="place">Entrée Nord de Dassom</h2>
-      </div>
-      <button id="sheetBtn" class="secondary">Personnage</button>
-    </header>
-
-    <main>
-      <aside id="sidebar">
-        <h3 id="who"></h3>
-        <div id="sheet"></div>
-        <hr>
-        <h4>État du monde</h4>
-        <div id="world"></div>
-      </aside>
-
-      <article>
-        <div id="art">🏰 👩‍🦳 🧑‍🦱 ⚔️</div>
-        <div id="log"></div>
-
-        <div class="composer">
-          <textarea id="action" placeholder="Écris ce que ton personnage dit ou tente..."></textarea>
-          <button id="send" class="primary">Agir</button>
-        </div>
-
-        <div class="quick">
-          <button data-q="J'observe attentivement les alentours.">Observer</button>
-          <button data-q="Je poursuis mon chemin.">Continuer</button>
-          <button data-q="Je parle à mon compagnon.">Compagnon</button>
-        </div>
-      </article>
-    </main>
-  </section>
-
-  <div id="overlay" aria-hidden="true">
-    <div class="diceCard">
-      <div id="die">20</div>
-      <h2 id="test">Test</h2>
-      <p id="result"></p>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
-</body>
-</html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hackénia 0.3</title><link rel="stylesheet" href="style.css"></head>
+<body><section id="create" class="wrap"><div class="card"><div class="brand">HACKÉNIA</div><h1>Crée ton aventurier</h1><p>Prototype 0.3 — le monde commence à se souvenir de ta manière d'agir.</p>
+<div class="grid"><label>Nom<input id="name" value="Aldren"></label><label>Race<select id="race"><option>Humain</option><option>Elfe</option><option>Nain</option><option>Gnome</option><option>Demi-orc</option><option>Tieffelin</option></select></label><label>Classe<select id="klass"><option>Guerrier</option><option>Magicien</option><option>Barde</option><option>Clerc</option><option>Rôdeur</option><option>Roublard</option><option>Paladin</option></select></label></div>
+<div id="stats" class="stats"></div><button id="start" class="primary">Commencer l'aventure</button><p id="err"></p></div></section>
+<section id="game" class="wrap" hidden><header><div><div class="brand mini">HACKÉNIA • 0.3</div><h2 id="place"></h2></div><div class="headerBtns"><button id="sheetBtn">Personnage</button><button id="restartBtn">Nouvelle partie</button></div></header>
+<main><aside id="sidebar"><h3 id="who"></h3><div id="sheet"></div><hr><h4>Journal</h4><div id="journal"></div><hr><h4>Inventaire</h4><div id="inventory">—</div></aside>
+<article><div id="art"></div><div id="log"></div><div class="composer"><textarea id="action" placeholder="Dis ou fais ce que tu veux..."></textarea><button id="send" class="primary">Agir</button></div><div class="hint">Entrée = agir • Maj+Entrée = nouvelle ligne. Aucun choix de dialogue imposé.</div></article></main></section>
+<div id="diceOverlay"><div class="diceCard"><div id="die">20</div><h2 id="diceTitle"></h2><div id="diceStep"></div><div id="diceOutcome"></div></div></div>
+<script src="script.js"></script></body></html>

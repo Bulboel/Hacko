@@ -1,257 +1,31 @@
-'use strict';
-
-const $ = (id) => document.getElementById(id);
-const STAT_NAMES = ['FOR','DEX','CON','INT','SAG','CHA'];
-const DEFAULTS = [15,14,13,12,10,8];
-
-const state = {
-  scene: 'gate',
-  trust: 0,
-  hostility: 0,
-  inventory: [],
-  character: null,
-  companion: 'Neria'
-};
-
-function abilityMod(score){
-  return Math.floor((score - 10) / 2);
+"use strict";
+const $=id=>document.getElementById(id);
+const STATS=["FOR","DEX","CON","INT","SAG","CHA"], DEFAULT=[15,14,13,12,10,8];
+let G={scene:"gate",char:null,mission:"offered",kayla:{patience:2,attitude:"neutral",insults:0},hilam:{attitude:"neutral"},dassom:"neutral",companion:"Neria",inventory:[],smoke:false};
+const mod=n=>Math.floor((n-10)/2), sign=n=>n>=0?`+${n}`:`${n}`, any=(t,a)=>a.some(x=>t.includes(x));
+function message(type,html){let d=document.createElement("div");d.className=`msg ${type}`;d.innerHTML=html;$("log").appendChild(d);$("log").scrollTop=$("log").scrollHeight}
+function journal(){let m=G.mission==="active"?"Mission du Lac Rose : acceptée":G.mission==="cancelled"?"Mission du Lac Rose : ANNULÉE":"Mission du Lac Rose : proposée";$("journal").innerHTML=`${m}<br>Statut à Dassom : ${G.dassom}`;$("inventory").textContent=G.inventory.join(", ")||"—"}
+function scene(s){G.scene=s;let d={gate:["Entrée Nord de Dassom","🏰 👩‍🦳 🧑‍🦱 ⚔️"],outside:["Aux abords de Dassom","🏰 🚪 🌾 🛤️"],forest:["Bois Tendre","🌲 🍃 🌳 🐿️"],clearing:["Clairière du Bois Tendre","🌳 ⚫ 🔵 🔴 🌳"],cabin:["Cabane isolée","🛖 🐴 🔥 🌾"]}[s];$("place").textContent=d[0];$("art").textContent=d[1]}
+function classify(t){return{attack:any(t,["j'attaque","je l'attaque","je frappe","je dégaine","je degaine","je lui saute dessus","je lance un sort sur"]),insult:any(t,["connasse","conasse","salope","idiote","crétine","cretine","ferme ta gueule","ta gueule","va te faire","pauvre conne"]),refuse:any(t,["pas envie","je refuse","non merci","je ne veux pas","j'en ai rien à foutre","rien a foutre"]),identity:any(t,["qui êtes-vous","qui etes-vous","qui es-tu","votre nom","ton nom","présentez","presentez"]),whyChosen:any(t,["pourquoi nous","pourquoi moi","choisi","choisis","choisie","choisies","recommandé","recommande"]),secret:any(t,["cachez","cache quelque","mentez","mens","sincère","sincere"]),leave:any(t,["je pars","partons","je quitte","bois tendre","prends la route","continue mon chemin"]),polite:any(t,["bonjour","merci","s'il vous plaît","s’il vous plaît","désolé","excusez"])}}
+function wait(ms){return new Promise(r=>setTimeout(r,ms))}
+async function roll(label,ability,dc){let b=mod(G.char.stats[ability]),o=$("diceOverlay"),die=$("die");$("diceTitle").textContent=`${label} • ${ability} ${sign(b)}`;$("diceStep").textContent="";$("diceOutcome").textContent="";$("diceOutcome").className="";o.classList.add("on");die.classList.add("rolling");let spin=setInterval(()=>die.textContent=1+Math.floor(Math.random()*20),90);await wait(1800);clearInterval(spin);let raw=1+Math.floor(Math.random()*20),total=raw+b;die.classList.remove("rolling");die.textContent=raw;await wait(700);$("diceStep").textContent=`${raw} ${sign(b)} = ${total} • DD ${dc}`;await wait(900);let ok=total>=dc;$("diceOutcome").textContent=ok?"RÉUSSITE":"ÉCHEC";$("diceOutcome").className=ok?"success":"failure";await wait(3000);o.classList.remove("on");return{ok,raw,total}}
+function kaylaInsult(){G.kayla.insults++;G.kayla.patience--;if(G.kayla.insults===1){G.kayla.attitude="contrariée";message("narrator","Kayla se tait. Son expression se ferme brutalement. Hilam tourne lentement la tête vers toi.");message("npc","<b>Hilam :</b> « Je te conseille de choisir tes prochains mots avec davantage de soin. »")}else{G.kayla.attitude="hostile";G.mission="cancelled";message("npc","<b>Kayla :</b> « Cela suffit. Nous trouverons quelqu'un d'autre. Vous ne participerez pas à cette mission. »");message("narrator","La mission vient d'être retirée au groupe. Pourtant, ton aventure ne s'arrête pas : Dassom et les routes d'Hackénia restent devant toi.")}journal()}
+async function gateAction(t,c){
+ if(c.attack){G.mission="cancelled";G.dassom="expulsé";message("narrator","Tu passes à l'agression. Kayla réagit avant même que ton attaque ne puisse réellement commencer. Une force écrasante te repousse et les gardes interviennent aussitôt.");message("npc","<b>Kayla :</b> « Hors de Dassom. »");message("narrator","Quelques instants plus tard, tu te retrouves au-delà des portes. Tu es libre de partir où tu veux, mais la mission, l'aide des jumeaux et une bonne partie de tes informations viennent de disparaître.");scene("outside");journal();return}
+ if(c.insult){kaylaInsult();return}
+ if(c.identity){message("npc","<b>Kayla :</b> « Kayla. Je suis l'une des jumelles et je règne actuellement sur la cité de Dassom avec Hilam. »");message("npc","<b>Hilam :</b> « Hilam. L'autre moitié du duo, si l'on veut faire simple. »");return}
+ if(c.whyChosen){message("npc","<b>Hilam :</b> « Vous avez été recommandés par des personnes de vos entourages respectifs, des gens qui ont participé avec nous il y a des années de cela maintenant. »");return}
+ if(c.secret){let r=await roll("Perspicacité","SAG",12);message("narrator",r.ok?"Kayla est sincèrement préoccupée par la mission. Pourtant, son silence et un bref regard vers Hilam te confirment qu'ils ne vous disent pas tout.":"Tu observes Kayla, mais son expression reste trop maîtrisée pour en tirer une certitude.");return}
+ if(c.refuse){G.mission="cancelled";message("npc","<b>Kayla :</b> « C'est votre droit. Nous chercherons d'autres aventuriers. »");message("narrator","La mission est refusée. Rien ne t'empêche toutefois de rester à Dassom ou de prendre la route de ton propre chef.");journal();return}
+ if(c.leave){if(G.mission!=="cancelled")G.mission="active";scene("forest");message("narrator","Tu quittes les portes de Dassom et t'engages dans le Bois Tendre. Neria t'accompagne.");journal();return}
+ if(c.polite&&G.kayla.attitude==="contrariée"){G.kayla.attitude="neutral";message("npc","<b>Kayla :</b> « Très bien. Reprenons. »");return}
+ message("npc",G.kayla.attitude==="contrariée"?"Kayla garde le silence. Hilam attend de voir ce que tu vas faire.":"<b>Kayla :</b> « Je t'écoute. »")
 }
-function signed(n){
-  return n >= 0 ? `+${n}` : `${n}`;
-}
-function includesAny(text, words){
-  return words.some((w) => text.includes(w));
-}
-
-function buildStats(){
-  const wrap = $('stats');
-  wrap.innerHTML = '';
-  STAT_NAMES.forEach((name, i) => {
-    const div = document.createElement('label');
-    div.className = 'stat';
-    div.innerHTML = `${name}<input id="stat_${name}" type="number" min="3" max="20" value="${DEFAULTS[i]}">`;
-    wrap.appendChild(div);
-  });
-}
-
-function addMessage(type, html){
-  const div = document.createElement('div');
-  div.className = `msg ${type}`;
-  div.innerHTML = html;
-  $('log').appendChild(div);
-  $('log').scrollTop = $('log').scrollHeight;
-}
-
-function updateWorld(){
-  $('world').innerHTML =
-    `Confiance PNJ : ${state.trust}<br>` +
-    `Hostilité : ${state.hostility}<br>` +
-    `Inventaire : ${state.inventory.length ? state.inventory.join(', ') : '—'}`;
-}
-
-function setScene(scene){
-  state.scene = scene;
-  const scenes = {
-    gate: ['Entrée Nord de Dassom', '🏰 👩‍🦳 🧑‍🦱 ⚔️'],
-    forest: ['Bois Tendre', '🌲 🍃 🌳 🐿️'],
-    clearing: ['Clairière du Bois Tendre', '🌳 ⚫ 🔵 🔴 🌳'],
-    cabin: ['Cabane isolée', '🛖 🐴 🔥 🌾']
-  };
-  const data = scenes[scene];
-  $('place').textContent = data[0];
-  $('art').textContent = data[1];
-}
-
-function rollDice(label, ability, dc){
-  return new Promise((resolve) => {
-    const bonus = abilityMod(state.character.stats[ability]);
-    const overlay = $('overlay');
-    const die = $('die');
-
-    $('test').textContent = `${label} • ${ability} ${signed(bonus)}`;
-    $('result').textContent = '';
-    overlay.classList.add('on');
-    overlay.setAttribute('aria-hidden','false');
-    die.classList.add('rolling');
-
-    const spinner = setInterval(() => {
-      die.textContent = String(1 + Math.floor(Math.random() * 20));
-    }, 70);
-
-    setTimeout(() => {
-      clearInterval(spinner);
-      const raw = 1 + Math.floor(Math.random() * 20);
-      const total = raw + bonus;
-      const success = total >= dc;
-
-      die.classList.remove('rolling');
-      die.textContent = String(raw);
-      $('result').textContent = `${raw} ${signed(bonus)} = ${total} • DD ${dc} • ${success ? 'RÉUSSITE' : 'ÉCHEC'}`;
-
-      setTimeout(() => {
-        overlay.classList.remove('on');
-        overlay.setAttribute('aria-hidden','true');
-        resolve(success);
-      }, 1100);
-    }, 900);
-  });
-}
-
-async function act(raw){
-  const t = raw.toLowerCase().trim();
-  if (!t) return;
-
-  addMessage('player', raw);
-
-  if (includesAny(t, ['idiot','crétin','abruti','menace','attaque','frappe','tue','tuer','dégage'])) {
-    state.hostility += 2;
-  }
-  if (includesAny(t, ['bonjour','merci','magnifique','joli','désolé','s’il vous plaît',"s'il vous plaît"])) {
-    state.trust += 1;
-  }
-
-  if (state.scene === 'gate') {
-    if (includesAny(t, ['cache','mentez','sincère','sincere'])) {
-      const ok = await rollDice('Perspicacité','SAG',12);
-      addMessage('narrator', ok
-        ? 'Kayla semble sincèrement inquiète, mais elle retient clairement une partie de la vérité.'
-        : 'Tu ne parviens pas à lire clairement ses intentions.');
-    } else if (includesAny(t, ['pourquoi','jumeaux','récompense','recompense','payer','payé','paye'])) {
-      addMessage('npc', '<b>Hilam :</b> « Leur sécurité est essentielle. Dassom saura vous récompenser généreusement. »');
-    } else if (includesAny(t, ['pars','partons','bois','route','quitte','continue'])) {
-      setScene('forest');
-      addMessage('narrator', 'Vous quittez Dassom et entrez dans le Bois Tendre. Neria marche à tes côtés.');
-    } else {
-      addMessage('npc', '<b>Kayla :</b> « Je t’écoute. Certaines réponses devront cependant attendre. »');
-    }
-  }
-
-  else if (state.scene === 'forest') {
-    if (includesAny(t, ['compagnon','neria','parle à neria','parle a neria'])) {
-      addMessage('npc', '<b>Neria :</b> « Je suis curieuse de voir le Lac Rose... mais je pense qu’on ne nous a pas tout dit. »');
-    } else if (includesAny(t, ['observe','cherche','regarde','inspecte'])) {
-      const ok = await rollDice('Perception','SAG',10);
-      addMessage('narrator', ok
-        ? 'Entre les branches, tu distingues une fine colonne de fumée.'
-        : 'Rien d’inhabituel ne saute aux yeux.');
-    } else if (includesAny(t, ['sépare','separe','seul'])) {
-      const ok = await rollDice('Perception','SAG',11);
-      addMessage('narrator', ok
-        ? 'Tu entends un loup affamé avant qu’il n’apparaisse et tu as le temps de te préparer.'
-        : 'Un loup affamé surgit des fourrés et te surprend !');
-    } else if (includesAny(t, ['continue','avance','clairière','clairiere','chemin'])) {
-      setScene('clearing');
-      addMessage('narrator', 'Le chemin débouche sur une clairière où poussent des baies noires, bleues et rouges.');
-    } else {
-      addMessage('system', 'Action mémorisée. Cette version locale ne sait pas encore improviser toutes les conséquences possibles.');
-    }
-  }
-
-  else if (state.scene === 'clearing') {
-    if (includesAny(t, ['identifier','nature','connais','étudie','etudie'])) {
-      const ok = await rollDice('Nature','INT',11);
-      addMessage('narrator', ok
-        ? 'Tu identifies les propriétés : noire contre la putréfaction, bleue soigne légèrement, rouge est nocive pendant sa digestion.'
-        : 'Tu n’es pas assez certain de leurs propriétés pour t’y fier.');
-    } else if (includesAny(t, ['cueille','récolte','recolte','prends']) &&
-               includesAny(t, ['rouge','bleue','noire'])) {
-      const color = t.includes('rouge') ? 'rouge' : (t.includes('bleue') ? 'bleue' : 'noire');
-      state.inventory.push(`baie ${color}`);
-      addMessage('narrator', `Tu récoltes une baie ${color}.`);
-    } else if (includesAny(t, ['fumée','fumee','cabane','aller voir'])) {
-      setScene('cabin');
-      addMessage('narrator', 'La fumée mène à une petite cabane. Un cheval nain broute devant la porte.');
-      addMessage('npc', '<b>Fermier :</b> « Des vendeurs ? Non merci. Passez votre chemin. »');
-    } else {
-      addMessage('system', 'Tu peux examiner les baies, chercher la fumée ou tenter une autre action libre.');
-    }
-  }
-
-  else if (state.scene === 'cabin') {
-    if (t.includes('cheval') && includesAny(t, ['beau','joli','magnifique','adorable','superbe'])) {
-      state.trust += 3;
-      addMessage('npc', 'Le fermier s’illumine. <b>« Enfin quelqu’un avec des yeux ! Il s’appelle Pécorin ! »</b>');
-    } else if (includesAny(t, ['menace','attaque','frappe','arme'])) {
-      const ok = await rollDice('Intimidation','CHA',15);
-      addMessage('npc', ok
-        ? 'Le fermier cesse de sourire. « Range ça. Ensuite, peut-être que nous parlerons. »'
-        : 'Le fermier ne semble pas impressionné. « Mauvaise idée. »');
-    } else if (includesAny(t, ['berdésa','berdesa','chariot'])) {
-      addMessage('npc', '<b>Fermier :</b> « Les chariots se font rares à Berdésa. Si vous avez le temps, allez voir. »');
-    } else if (includesAny(t, ['qui es','qui êtes','qui etes','sage','cache','fermier'])) {
-      const ok = await rollDice('Perspicacité','SAG',14);
-      addMessage('npc', ok
-        ? '« Un fermier qui aime son cheval. Ça ne vous suffit pas ? » Son regard confirme presque qu’il joue un rôle.'
-        : '« Je suis exactement ce que vous voyez : un homme, une cabane et un excellent cheval. »');
-    } else {
-      addMessage('npc', state.hostility > 2
-        ? 'Le fermier suit chacun de tes gestes, méfiant.'
-        : 'Le fermier t’observe avec curiosité. « Continue, je t’écoute. »');
-    }
-  }
-
-  updateWorld();
-}
-
-function startGame(){
-  try {
-    const stats = {};
-    STAT_NAMES.forEach((name) => {
-      const value = Number($(`stat_${name}`).value);
-      stats[name] = Number.isFinite(value) ? value : 10;
-    });
-
-    state.character = {
-      name: $('name').value.trim() || 'Aventurier',
-      race: $('race').value,
-      klass: $('klass').value,
-      stats
-    };
-
-    $('create').hidden = true;
-    $('game').hidden = false;
-    $('who').textContent = state.character.name;
-    $('sheet').innerHTML =
-      `${state.character.race} • ${state.character.klass} • Niveau 1<br><br>` +
-      STAT_NAMES.map((name) => `${name} ${stats[name]} (${signed(abilityMod(stats[name]))})`).join('<br>');
-
-    setScene('gate');
-    updateWorld();
-
-    addMessage('narrator', 'Kayla et Hilam vous attendent devant les portes Nord de Dassom. Les nouveaux jumeaux doivent apparaître au Lac Rose.');
-    addMessage('npc', '<b>Kayla :</b> « Nous comptons sur vous. Posez vos questions si vous en avez. »');
-    addMessage('system', 'Écris librement ce que ton personnage dit ou tente. Certains mots et intentions déclenchent déjà des réactions et des jets.');
-  } catch (err) {
-    console.error(err);
-    $('startupError').textContent = 'Erreur au démarrage : ' + err.message;
-  }
-}
-
-function init(){
-  buildStats();
-
-  $('start').addEventListener('click', startGame);
-  $('send').addEventListener('click', () => {
-    const value = $('action').value;
-    $('action').value = '';
-    act(value);
-  });
-  $('action').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      $('send').click();
-    }
-  });
-  document.querySelectorAll('[data-q]').forEach((button) => {
-    button.addEventListener('click', () => {
-      $('action').value = button.dataset.q;
-      $('send').click();
-    });
-  });
-  $('sheetBtn').addEventListener('click', () => {
-    const sidebar = $('sidebar');
-    sidebar.style.display = sidebar.style.display === 'none' ? 'block' : '';
-  });
-}
-
-document.addEventListener('DOMContentLoaded', init);
+async function outsideAction(t,c){if(any(t,["retourne","rentre","porte","dassom"])){message("narrator",G.dassom==="expulsé"?"Les gardes te barrent l'entrée. Pour l'instant, revenir simplement par la grande porte semble compromis.":"Tu retournes vers Dassom.");return}if(any(t,["forêt","foret","bois","nord","lac","montagne"])){scene("forest");message("narrator","Sans mandat ni indications précises, tu prends la route vers le nord. Le Bois Tendre s'étend devant toi.");return}message("narrator","Tu es libre aux abords de Dassom. Tu peux suivre une route, longer les murs, tenter de revenir en ville ou partir dans la campagne. Cette zone libre sera développée davantage.")}
+async function forestAction(t){if(any(t,["neria","compagnon"])){message("npc","<b>Neria :</b> « Je ne sais pas si tout ça est une bonne idée... mais je suis encore là. »");return}if(any(t,["observe","cherche","regarde","inspecte","fumée","fumee"])){let r=await roll("Perception","SAG",10);G.smoke=r.ok;if(r.ok)message("narrator","Entre les arbres, tu repères une fine colonne de fumée.");else message("narrator","Tu ne remarques rien de particulier.");return}if(any(t,["sépare","separe","seul"])){let r=await roll("Perception","SAG",11);message("narrator",r.ok?"Un grognement te prévient : un loup affamé approche. Tu n'es pas surpris.":"Un loup affamé surgit des fourrés avant que tu ne puisses réagir.");return}if(any(t,["avance","continue","chemin","clairière","clairiere"])){scene("clearing");message("narrator","Tu atteins une petite clairière où poussent trois sortes de baies : noires, bleues et rouges.");return}message("system","L'action est cohérente, mais la 0.3 locale n'a pas encore assez de simulation pour en improviser correctement la conséquence.")}
+async function clearingAction(t){if(any(t,["identifier","nature","étudie","etudie","connais"])){let r=await roll("Nature","INT",11);message("narrator",r.ok?"Tu identifies les baies : noire contre la putréfaction, bleue rend 1d4-1 PV, rouge inflige 1d4 PV par heure pendant 6 heures une fois digérée.":"Tu n'es pas assez certain pour identifier leurs propriétés.");return}if(any(t,["cueille","récolte","recolte","prends"])&&any(t,["rouge","bleue","noire"])){let col=t.includes("rouge")?"rouge":t.includes("bleue")?"bleue":"noire";G.inventory.push("baie "+col);message("narrator",`Tu récoltes une baie ${col}.`);journal();return}if(any(t,["cabane","fumée","fumee","aller voir"])){scene("cabin");message("narrator","La fumée mène à une petite cabane. Un cheval nain broute près du foyer.");message("npc","<b>Fermier :</b> « Des vendeurs ? Non merci. »");return}message("system","Tu peux manipuler les baies, chercher des traces, suivre la fumée ou continuer à improviser.")}
+async function cabinAction(t,c){if(t.includes("cheval")&&any(t,["beau","joli","magnifique","adorable","superbe"])){message("npc","Le fermier se déride immédiatement. <b>« Ah ! Enfin quelqu'un qui sait reconnaître un cheval exceptionnel ! »</b>");return}if(any(t,["qui êtes","qui etes","qui es","votre nom"])){message("npc","<b>Fermier :</b> « Vous pouvez m'appeler Orven. Je m'occupe de ce coin et de mon cheval. Ça devrait suffire, non ? »");return}if(any(t,["berdésa","berdesa","chariot"])){message("npc","<b>Orven :</b> « Les chariots se font rares du côté de Berdésa. Quelque chose ne tourne pas rond à l'est. »");return}if(c.attack){let r=await roll("Initiative","DEX",12);message("narrator",r.ok?"Tu te prépares à agir, mais quelque chose dans la posture du fermier te fait comprendre que ce combat serait une très mauvaise idée.":"Avant même que tu ne sois correctement en position, le fermier s'est déjà déplacé. Cet homme n'est clairement pas un simple paysan.");return}message("npc","Orven t'observe avec attention, comme s'il cherchait à comprendre quel genre d'aventurier tu es.")}
+async function act(raw){let t=raw.toLowerCase().trim();if(!t)return;message("player",raw);let c=classify(t);if(G.scene==="gate")await gateAction(t,c);else if(G.scene==="outside")await outsideAction(t,c);else if(G.scene==="forest")await forestAction(t,c);else if(G.scene==="clearing")await clearingAction(t,c);else if(G.scene==="cabin")await cabinAction(t,c)}
+function start(){let stats={};STATS.forEach(n=>stats[n]=Number($("s_"+n).value)||10);G.char={name:$("name").value.trim()||"Aventurier",race:$("race").value,klass:$("klass").value,stats};$("create").hidden=true;$("game").hidden=false;$("who").textContent=G.char.name;$("sheet").innerHTML=`${G.char.race} • ${G.char.klass} • Niveau 1<br><br>`+STATS.map(n=>`${n} ${stats[n]} (${sign(mod(stats[n]))})`).join("<br>");scene("gate");journal();message("narrator","Kayla et Hilam t'attendent devant les portes Nord de Dassom. Ils souhaitent te confier une mission concernant l'apparition prochaine de nouveaux jumeaux au Lac Rose.");message("npc","<b>Kayla :</b> « Merci d'être venu. Avant que nous partions sur de mauvaises bases : pose les questions que tu souhaites. »");message("system","Tu n'as aucun menu de dialogue : écris réellement ce que ton personnage dit ou fait. Le prototype suit désormais certaines conséquences sociales durables.")}
+function init(){STATS.forEach((n,i)=>$("stats").insertAdjacentHTML("beforeend",`<label class=stat>${n}<input id="s_${n}" type=number min=3 max=20 value="${DEFAULT[i]}"></label>`));$("start").onclick=start;$("send").onclick=()=>{let v=$("action").value;$("action").value="";act(v)};$("action").onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("send").click()}};$("restartBtn").onclick=()=>location.reload();$("sheetBtn").onclick=()=>{$("sidebar").style.display=$("sidebar").style.display==="none"?"block":""}}
+document.addEventListener("DOMContentLoaded",init);
