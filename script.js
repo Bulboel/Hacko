@@ -1,106 +1,14 @@
-const state={rep:0,inventory:[],journal:"Mission : atteindre le Lac Rose.",scene:"gate"};
-const $=id=>document.getElementById(id);
-function roll(sides=20){const n=Math.floor(Math.random()*sides)+1;$("rollValue").textContent=n;return n}
-function update(){ $("rep").textContent=state.rep>=0?`+${state.rep}`:state.rep; $("inventory").textContent=state.inventory.length?state.inventory.join(", "):"Vide"; $("journal").textContent=state.journal}
-function render(scene){
-  state.scene=scene; const c=$("choices");c.innerHTML="";
-  const data=scenes[scene];$("sceneTitle").textContent=data.title;$("storyText").textContent=data.text;$("art").innerHTML=data.art;
-  $("dialogue").innerHTML=data.dialogue||"";
-  data.choices.forEach(x=>{const b=document.createElement("button");b.className="choice";b.textContent=x.label;b.onclick=()=>{if(x.action)x.action(); if(x.next)render(x.next);update()};c.appendChild(b)});
-  update()
-}
-function addBerry(type){
- state.inventory.push(type);
- state.journal="Vous avez récolté "+type+".";
-}
-const scenes={
-gate:{
- title:"L'entrée Nord de Dassom",
- art:"🏰<br>👩‍🦳  🧑‍🦱<br>⚔️ 🏹 🧙",
- text:"Kayla et Hilam vous attendent devant les portes Nord. Ils vous confient une mission inhabituelle : les nouveaux jumeaux doivent apparaître au Lac Rose. Vous devez les retrouver et les ramener à Dassom. La récompense sera à la hauteur de l'importance de la mission.",
- dialogue:"<b>Kayla :</b> « Nous vous demandons de nous faire confiance. Le temps presse. »<br><br><b>Hilam :</b> « Le passage vers le lac commence au-delà du Bois Tendre. »",
- choices:[
-  {label:"Accepter la mission et poser quelques questions.",next:"questions"},
-  {label:"Accepter sans poser de questions.",next:"forest"},
-  {label:"« Combien sommes-nous payés ? »",action:()=>state.rep+=0,next:"questions"}
- ]},
-questions:{
- title:"Des réponses... et des silences",
- art:"👩‍🦳 💬 🧑‍🦱<br>❓ ❓ ❓",
- text:"Vous insistez. Qui sont ces enfants ? Pourquoi vous ? Que se passe-t-il au Lac Rose ? Les jumeaux répondent, mais certaines réponses restent volontairement mystérieuses.",
- dialogue:"<b>Kayla :</b> « Ils sont importants pour Dassom. Plus important que je ne peux vous l'expliquer aujourd'hui. »<br><br><b>Hilam :</b> « Si vous voulez comprendre, vous devrez peut-être observer plutôt que demander. »",
- choices:[
-  {label:"Faire un jet de Perspicacité pour jauger Kayla.",action:()=>{const r=roll();alert(r>=12?`Perspicacité : ${r} — Kayla semble sincèrement inquiète.`:`Perspicacité : ${r} — impossible de savoir ce qu'elle cache.`)},next:"forest"},
-  {label:"Cesser les questions et partir vers le Bois Tendre.",next:"forest"}
- ]},
-forest:{
- title:"Le Bois Tendre",
- art:"🌲 🌳 🌲<br>🍃 🐿️ 🍃<br>🥾 🥾 🥾",
- text:"Vous quittez Dassom. Le Bois Tendre est calme, presque trop calme. La lumière traverse les feuillages et le chemin serpente vers les montagnes.",
- dialogue:"Votre compagnon vous accompagne. « Pour l'instant, je dirais que c'est une mission plutôt tranquille. »",
- choices:[
-  {label:"Suivre le chemin principal.",next:"clearing"},
-  {label:"Explorer les alentours.",next:"wolves"},
-  {label:"Se séparer pour couvrir davantage de terrain.",next:"wolves"}
- ]},
-wolves:{
- title:"Des grognements dans les fourrés",
- art:"🌲 🌲 🌲<br>🐺 &nbsp; 👀 &nbsp; 🐺<br>🌿 🌿 🌿",
- text:"Un bruissement. Puis un grognement. Des loups affamés apparaissent entre les arbres.",
- dialogue:"Votre compagnon : « Ils ne semblent pas vouloir nous laisser passer tranquillement... »",
- choices:[
-  {label:"⚔️ Combattre les loups.",action:()=>{const r=roll();alert(`Jet d'initiative : ${r}. Le combat est prêt à être développé dans la prochaine version.`);state.journal="Vous avez affronté des loups affamés.";},next:"clearing"},
-  {label:"🍖 Leur donner de la nourriture.",action:()=>{state.rep+=1;state.journal="Vous avez évité un combat en nourrissant les loups.";},next:"clearing"},
-  {label:"🏃 Fuir vers la clairière.",next:"clearing"}
- ]},
-clearing:{
- title:"La clairière aux trois baies",
- art:"🌳 🌿 🌳<br>⚫  🔵  🔴<br>🌱 🌱 🌱",
- text:"Vous découvrez une petite clairière. Trois sortes de baies poussent ici. Vous pouvez les récolter, les étudier ou simplement continuer.",
- dialogue:"Certaines baies semblent familières. D'autres pourraient réserver des surprises...",
- choices:[
-  {label:"Récolter une baie noire.",action:()=>addBerry("baie noire"),next:"smoke"},
-  {label:"Récolter une baie bleue.",action:()=>addBerry("baie bleue"),next:"smoke"},
-  {label:"Récolter une baie rouge.",action:()=>addBerry("baie rouge"),next:"smoke"},
-  {label:"Ne rien toucher et observer la forêt.",next:"smoke"}
- ]},
-smoke:{
- title:"Une fumée au loin",
- art:"🌲 🌲 🌲<br>💨 💨 🛖<br>🌿 🌿 🌿",
- text:"Au loin, quelque chose attire votre attention : une fine colonne de fumée s'élève derrière les arbres.",
- dialogue:"Un jet de Perception ou d'Investigation pourrait confirmer votre intuition.",
- choices:[
-  {label:"🎲 Faire un jet de Perception.",action:()=>{const r=roll();alert(`Perception : ${r} — ${r>=10?"Vous repérez clairement une petite cabane.":"Vous distinguez difficilement une fumée au loin."}`)},next:"cabin"},
-  {label:"Aller voir la fumée sans attendre.",next:"cabin"},
-  {label:"Continuer vers les montagnes.",next:"cabin"}
- ]},
-cabin:{
- title:"La cabane du fermier",
- art:"🛖<br>🌾 🐴 🌾<br>🪵 🔥 🪵",
- text:"Une petite cabane se trouve au milieu de la forêt. Un homme s'occupe de quelques travaux tandis qu'un étonnant petit cheval robuste broute près de lui.",
- dialogue:"<b>Fermier :</b> « Vous êtes des vendeurs ? J'ai pas besoin de grand-chose. »<br><br>Il semble peu intéressé... jusqu'à ce que votre regard se pose sur son cheval.",
- choices:[
-  {label:"« Votre cheval est magnifique ! »",action:()=>{state.rep+=2;state.journal="Le mystérieux fermier semble apprécier votre groupe.";},next:"sage"},
-  {label:"Demander immédiatement son chemin.",next:"sage"},
-  {label:"Inspecter discrètement la cabane.",action:()=>{const r=roll();alert(`Investigation : ${r}. Quelque chose chez cet homme ne colle pas avec son apparence.`)},next:"sage"}
- ]},
-sage:{
- title:"Un fermier pas comme les autres",
- art:"🧙‍♂️<br>🐴 ✨<br>🛖",
- text:"L'homme finit par se montrer beaucoup plus bavard. Il vous parle de la région et vous apprend qu'un problème inquiète les habitants de Berdésa : les chariots se font rares.",
- dialogue:"<b>Fermier :</b> « Si vous allez vers l'est... vous pourriez faire un détour par Berdésa. Quelque chose ne tourne pas rond là-bas. »<br><br><i>Le regard du fermier semble évaluer chacun de vos gestes.</i>",
- choices:[
-  {label:"🛒 « Nous allons voir ce qui se passe à Berdésa. »",action:()=>{state.journal="Nouvelle piste : les chariots se font rares à Berdésa.";},next:"end"},
-  {label:"🌸 « Notre mission passe avant tout. Nous continuons vers le Lac Rose. »",action:()=>{state.journal="Vous avez choisi de poursuivre vers le Lac Rose.";},next:"end"},
-  {label:"🎲 Faire un jet de Perspicacité sur le fermier.",action:()=>{const r=roll();alert(`Perspicacité : ${r} — ${r>=15?"Cet homme cache clairement quelque chose.":"Son identité reste mystérieuse."}`)},next:"end"}
- ]},
-end:{
- title:"Fin du prototype 0.1",
- art:"🌲 🛖 🏔️<br>🧙‍♂️ 🐴<br>🌸 ✨ 🌸",
- text:"Bravo ! Vous venez d'atteindre la première bifurcation majeure du jeu. Dans la prochaine version, Berdésa et le chemin vers la grotte du Lac Rose deviendront de véritables zones explorables.",
- dialogue:"<b>Ce prototype est volontairement petit.</b> Le moteur est déjà préparé pour accueillir davantage de dialogues, jets, inventaire, combats et conséquences.",
- choices:[
-  {label:"↻ Rejouer depuis le début.",next:"gate"}
- ]}
-};
-$("restart").onclick=()=>render("gate"); render("gate");
+const $=x=>document.getElementById(x), names=["FOR","DEX","CON","INT","SAG","CHA"], vals=[15,14,13,12,10,8];let S={scene:"gate",trust:0,hostile:0,inv:[],c:null};
+names.forEach((n,i)=>$("stats").innerHTML+=`<label class=stat>${n}<input id="${n}" type=number value="${vals[i]}" min=3 max=20></label>`);
+const mod=n=>Math.floor((n-10)/2), has=(t,a)=>a.some(x=>t.includes(x));
+function say(c,t){$("log").innerHTML+=`<div class="m ${c}">${t}</div>`;$("log").scrollTop=99999}
+function world(){$("world").innerHTML=`Confiance PNJ : ${S.trust}<br>Hostilité : ${S.hostile}<br>Inventaire : ${S.inv.join(", ")||"—"}`}
+function scene(s){S.scene=s;let d={gate:["Entrée Nord de Dassom","🏰 👩‍🦳 🧑‍🦱 ⚔️"],forest:["Bois Tendre","🌲 🍃 🌳 🐿️"],clearing:["Clairière","🌳 ⚫ 🔵 🔴 🌳"],cabin:["Cabane isolée","🛖 🐴 🔥 🌾"]}[s];$("place").textContent=d[0];$("art").textContent=d[1]}
+async function roll(label,ability,dc){return new Promise(ok=>{let b=mod(S.c.st[ability]),o=$("overlay"),d=$("die");$("test").textContent=`${label} • ${ability} ${b>=0?"+":""}${b}`;$("result").textContent="";o.classList.add("on");let q=setInterval(()=>d.textContent=1+Math.floor(Math.random()*20),65);setTimeout(()=>{clearInterval(q);let r=1+Math.floor(Math.random()*20),tot=r+b;d.textContent=r;$("result").textContent=`${r} ${b>=0?"+":""}${b} = ${tot} • DD ${dc} • ${tot>=dc?"RÉUSSITE":"ÉCHEC"}`;setTimeout(()=>{o.classList.remove("on");ok(tot>=dc)},1100)},900)})}
+async function act(raw){let t=raw.toLowerCase().trim();if(!t)return;say("p",raw);if(has(t,["idiot","crétin","menace","attaque","frappe","tue"]))S.hostile+=2;if(has(t,["bonjour","merci","magnifique","joli","désolé"]))S.trust++;
+if(S.scene==="gate"){if(has(t,["cache","mentez","sincère"])){let x=await roll("Perspicacité","SAG",12);say("n",x?"Kayla est sincèrement inquiète, mais retient une partie de la vérité.":"Tu n'arrives pas à lire ses intentions.");}else if(has(t,["pourquoi","jumeaux","récompense","payer"])){say("npc","<b>Hilam :</b> « Leur sécurité est essentielle. Dassom saura vous récompenser généreusement. »")}else if(has(t,["pars","partons","bois","route","quitte","continue"])){scene("forest");say("n","Vous entrez dans le Bois Tendre. Ton compagnon Neria marche à tes côtés.")}else say("npc","<b>Kayla :</b> « Je t'écoute. Certaines réponses devront cependant attendre. »")}
+else if(S.scene==="forest"){if(has(t,["observe","cherche","regarde"])){let x=await roll("Perception","SAG",10);say("n",x?"Tu distingues une fine fumée entre les arbres.":"Rien d'inhabituel ne saute aux yeux.")}else if(has(t,["sépare","seul"])){let x=await roll("Perception","SAG",11);say("n",x?"Tu entends un loup affamé avant son arrivée et peux te préparer.":"Un loup affamé surgit et te surprend !")}else if(has(t,["continue","avance","clairière","chemin"])){scene("clearing");say("n","Le chemin débouche sur une clairière où poussent des baies noires, bleues et rouges.")}else say("n","Ton action est enregistrée. Cette version locale ne sait pas encore improviser toutes ses conséquences.")}
+else if(S.scene==="clearing"){if(has(t,["identifier","nature","connais","étudie"])){let x=await roll("Nature","INT",11);say("n",x?"Tu identifies les baies : noire contre la putréfaction, bleue soigne légèrement, rouge est nocive pendant sa digestion.":"Tu n'es pas certain de leurs propriétés.")}else if(has(t,["cueille","récolte","prends"])&&has(t,["rouge","bleue","noire"])){let c=has(t,["rouge"])?"rouge":has(t,["bleue"])?"bleue":"noire";S.inv.push("baie "+c);say("n","Tu récoltes une baie "+c+".")}else if(has(t,["fumée","cabane","aller voir"])){scene("cabin");say("n","La fumée mène à une petite cabane. Un cheval nain broute devant.");say("npc","<b>Fermier :</b> « Des vendeurs ? Non merci. »")}else say("n","Tu peux examiner les baies, chercher la fumée ou tenter toute autre action.")}
+else{if(has(t,["cheval"])&&has(t,["beau","joli","magnifique","adorable","superbe"])){S.trust+=3;say("npc","Le fermier s'illumine. <b>« Enfin quelqu'un avec des yeux ! Il s'appelle Pécorin ! »</b>")}else if(has(t,["menace","attaque","frappe","arme"])){let x=await roll("Intimidation","CHA",15);say("npc",x?"« Range ça. Ensuite nous parlerons. »":"Le fermier ne semble pas impressionné. « Mauvaise idée. »")}else if(has(t,["berdésa","berdesa","chariot"])){say("npc","<b>Fermier :</b> « Les chariots se font rares à Berdésa. Si vous avez le temps, allez voir. »")}else if(has(t,["qui es","qui êtes","sage","cache","fermier"])){let x=await roll("Perspicacité","SAG",14);say("npc",x?"« Un fermier qui aime son cheval. Ça ne suffit pas ? » Son regard confirme presque qu'il joue un rôle.":"« Je suis exactement ce que vous voyez. »")}else say("npc",S.hostile>2?"Le fermier suit chacun de tes gestes, méfiant.":"Le fermier t'observe. « Continue, je t'écoute. »")} }world()}
+$("start").onclick=()=>{let st={};names.forEach(n=>st[n]=+$(""+n).value);S.c={name:$("name").value||"Aventurier",race:$("race").value,k:$("klass").value,st};$("create").hidden=true;$("game").hidden=false;$("who").textContent=S.c.name;$("sheet").innerHTML=`${S.c.race} • ${S.c.k}<br>`+names.map(n=>`${n} ${st[n]} (${mod(st[n])>=0?"+":""}${mod(st[n])})`).join("<br>");scene("gate");world();say("n","Kayla et Hilam vous attendent devant les portes Nord. Les nouveaux jumeaux doivent apparaître au Lac Rose.");say("npc","<b>Kayla :</b> « Nous comptons sur vous. Posez vos questions si vous en avez. »");say("n","Écris librement ce que ton personnage dit ou tente.")};
+$("send").onclick=()=>{let v=$("action").value;$("action").value="";act(v)};$("action").onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("send").click()}};
