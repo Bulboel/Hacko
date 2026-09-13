@@ -1,4 +1,88 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hackénia 0.2</title><link rel="stylesheet" href="style.css"></head><body>
-<section id="create"><h1>Hackénia</h1><h2>Crée ton aventurier</h2><input id="name" value="Aldren" placeholder="Nom"><select id="race"><option>Humain</option><option>Elfe</option><option>Nain</option><option>Gnome</option><option>Demi-orc</option><option>Tieffelin</option></select><select id="klass"><option>Guerrier</option><option>Magicien</option><option>Barde</option><option>Clerc</option><option>Rôdeur</option><option>Roublard</option><option>Paladin</option></select><div id="stats"></div><button id="start">Commencer</button></section>
-<section id="game" hidden><header><b>HACKÉNIA • 0.2</b><h2 id="place">Entrée Nord de Dassom</h2></header><main><aside><h3 id="who"></h3><div id="sheet"></div><hr><div id="world"></div></aside><article><div id="art">🏰 👩‍🦳 🧑‍🦱 ⚔️</div><div id="log"></div><textarea id="action" placeholder="Écris librement ce que ton personnage dit ou tente..."></textarea><button id="send">Agir</button></article></main></section>
-<div id="overlay"><div id="die">20</div><h2 id="test"></h2><p id="result"></p></div><script src="script.js"></script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hackénia — Prototype 0.2.1</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section id="create" class="screen">
+    <div class="card">
+      <div class="brand">HACKÉNIA</div>
+      <h1>Crée ton aventurier</h1>
+      <p class="lead">Prototype 0.2.1 — création de personnage, actions libres et jets de dés animés.</p>
+
+      <div class="grid3">
+        <label>Nom
+          <input id="name" value="Aldren" maxlength="24">
+        </label>
+        <label>Race
+          <select id="race">
+            <option>Humain</option><option>Elfe</option><option>Nain</option>
+            <option>Gnome</option><option>Demi-orc</option><option>Tieffelin</option>
+          </select>
+        </label>
+        <label>Classe
+          <select id="klass">
+            <option>Guerrier</option><option>Magicien</option><option>Barde</option>
+            <option>Clerc</option><option>Rôdeur</option><option>Roublard</option><option>Paladin</option>
+          </select>
+        </label>
+      </div>
+
+      <p class="sub">Caractéristiques</p>
+      <div id="stats" class="stats"></div>
+
+      <button id="start" class="primary">Commencer</button>
+      <p id="startupError" class="error"></p>
+    </div>
+  </section>
+
+  <section id="game" class="screen" hidden>
+    <header>
+      <div>
+        <div class="brand smallbrand">HACKÉNIA • 0.2.1</div>
+        <h2 id="place">Entrée Nord de Dassom</h2>
+      </div>
+      <button id="sheetBtn" class="secondary">Personnage</button>
+    </header>
+
+    <main>
+      <aside id="sidebar">
+        <h3 id="who"></h3>
+        <div id="sheet"></div>
+        <hr>
+        <h4>État du monde</h4>
+        <div id="world"></div>
+      </aside>
+
+      <article>
+        <div id="art">🏰 👩‍🦳 🧑‍🦱 ⚔️</div>
+        <div id="log"></div>
+
+        <div class="composer">
+          <textarea id="action" placeholder="Écris ce que ton personnage dit ou tente..."></textarea>
+          <button id="send" class="primary">Agir</button>
+        </div>
+
+        <div class="quick">
+          <button data-q="J'observe attentivement les alentours.">Observer</button>
+          <button data-q="Je poursuis mon chemin.">Continuer</button>
+          <button data-q="Je parle à mon compagnon.">Compagnon</button>
+        </div>
+      </article>
+    </main>
+  </section>
+
+  <div id="overlay" aria-hidden="true">
+    <div class="diceCard">
+      <div id="die">20</div>
+      <h2 id="test">Test</h2>
+      <p id="result"></p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
