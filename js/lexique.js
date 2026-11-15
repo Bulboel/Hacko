@@ -16,7 +16,7 @@
 
   function loadData() {
     if (loading) return loading;
-    loading = Promise.all(FILES.map(f => new Promise((res, rej) => {
+    loading = Promise.all([...FILES, "gen"].map(f => new Promise((res, rej) => {
       const s = document.createElement("script"); s.src = `data/lexique-${f}.js`; s.onload = res; s.onerror = () => rej(new Error("Données introuvables : " + f)); document.head.append(s);
     }))).then(() => {
       for (const k of FILES) for (const e of H.LEX[k]) {
@@ -188,5 +188,5 @@
     }
     if (!mobile()) $("#lex-q").focus();
   }
-  H.Lex = { open };
+  H.Lex = { open, ensure: loadData, show: e => openModal(detail(e), "wide") };
 })();

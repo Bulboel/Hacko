@@ -32,6 +32,8 @@ window.H = window.H || {};
     return {
       mode: "local", uid, newId,
       async init() {},
+      async peek(c) { try { return (JSON.parse(localStorage.getItem("hacko.room." + c) || "{}")).meta || null; } catch (e) { return null; } },
+      async signInGM() { return uid; },
       async join(c, callback) {
         code = c; cb = callback;
         window.addEventListener("storage", onStorage);
@@ -66,9 +68,23 @@ window.H = window.H || {};
         await load(base + "firebase-app-compat.js");
         await Promise.all([load(base + "firebase-auth-compat.js"), load(base + "firebase-database-compat.js")]);
         firebase.initializeApp(cfg);
-        const cred = await firebase.auth().signInAnonymously();
-        uid = cred.user.uid;
+        const auth = firebase.auth();
+        let user = await new Promise(res => { const off = auth.onAuthStateChanged(u => { off(); res(u); }); });
+        if (!user) user = (await auth.signInAnonymously()).user;
+        uid = user.uid;
         db = firebase.database();
+      },
+      async peek(c) { try { return (await db.ref(`rooms/${c}/meta`).once("value")).val(); } catch (e) { return null; } },
+      /* Compte e-mail du MJ : identité stable sur tous ses appareils. mode = "login" | "create" */
+      async signInGM(email, password, mode) {
+        const auth = firebase.auth();
+        try {
+          const cred = mode === "create" ? await auth.createUserWithEmailAndPassword(email, password) : await auth.signInWithEmailAndPassword(email, password);
+          uid = cred.user.uid; return uid;
+        } catch (e) {
+          const m = { "auth/operation-not-allowed": "La connexion par e-mail n'est pas activée dans Firebase (Authentication → Sign-in method → E-mail/Mot de passe).", "auth/email-already-in-use": "Ce compte existe déjà : utilise « Me connecter ».", "auth/weak-password": "Mot de passe trop court (6 caractères minimum).", "auth/invalid-email": "Adresse e-mail invalide.", "auth/invalid-credential": "E-mail ou mot de passe incorrect (ou compte pas encore créé).", "auth/wrong-password": "Mot de passe incorrect.", "auth/user-not-found": "Compte inconnu : utilise « Créer mon compte MJ »." }[e.code];
+          throw new Error(m || e.message);
+        }
       },
       join(c, callback) {
         code = c;

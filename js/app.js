@@ -19,7 +19,7 @@ const h = (tag, attrs = {}, ...kids) => {
 };
 
 /* ---------- Données de jeu ---------- */
-const CLASSES = ["Guerrier", "Magicien", "Clerc", "Rôdeur", "Roublard", "Barde", "Paladin", "Autre"];
+const CLASSES = ["Barbare", "Barde", "Clerc", "Druide", "Ensorceleur", "Guerrier", "Magicien", "Moine", "Occultiste", "Paladin", "Rôdeur", "Roublard", "Autre"];
 const PRESETS = [
   { kind: "slime", name: "Slime", hp: 14, ac: 8, bonus: 0 },
   { kind: "chauve", name: "Chauve-souris", hp: 9, ac: 12, bonus: 3 },
@@ -41,6 +41,7 @@ const FX_PRESETS = [["adv", "aux jets d'attaque"], ["dis", "aux jets d'attaque"]
 /* ---------- État ---------- */
 let sync, ready = false, code = null, myName = "", tab = "combat";
 let S = {};
+let sheetTab = "gen";
 let menu = { screen: "main", pending: null }, lastTurn = null, lastActive = null;
 let noteTag = "", sheetId = null, pendingRender = false;
 H.state = S;
@@ -73,58 +74,105 @@ function renderInto(el, build) {
 }
 document.addEventListener("focusout", () => setTimeout(() => { if (pendingRender && code) { pendingRender = false; render(); } }, 60));
 
-/* ---------- Accueil ---------- */
-function genCode() { const a = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; return Array.from({ length: 5 }, () => a[Math.floor(Math.random() * a.length)]).join(""); }
+/* ---------- Accueil : deux tables fixes ---------- */
+const TABLES = [{ code: "REVE", name: "La compagnie du rêve" }, { code: "TABLE2", name: "Seconde table" }];
+const store = {
+  get(k, d = null) { try { const v = localStorage.getItem("hacko." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("hacko." + k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem("hacko." + k); } catch (e) {} }
+};
 
 async function ensureSync() { if (ready) return; await sync.init(); ready = true; }
 
+/* o = { code, name, gm } — gm: ouvre/reprend la table en tant que MJ (déjà identifié) */
 async function enter(o) {
   const err = $("#land-err"); err.textContent = "";
+  const fail = m => { try { sync.leave(); } catch (e) {} code = null; throw new Error(m); };
   try {
     await ensureSync();
-    code = o.code.toUpperCase().trim();
+    code = o.code;
     S = {}; H.state = S;
     await sync.join(code, onState);
-    if (o.create) {
-      if (S.meta) { sync.leave(); code = null; throw new Error("Ce code est déjà pris, réessaie."); }
-    } else if (!S.meta) { sync.leave(); code = null; throw new Error("Salle introuvable. Vérifie le code."); }
+    const tbl = TABLES.find(t => t.code === code);
+    if (!S.meta) {
+      if (!o.gm) fail("Cette table n'est pas encore ouverte : le MJ doit d'abord l'ouvrir.");
+      // première ouverture : le MJ devient propriétaire de la table
+    } else if (o.gm && S.meta.gm !== uid()) fail("Cette table a déjà un MJ (un autre compte). Connecte-toi avec le compte MJ de cette table.");
     const members = S.members || {}, mine = members[uid()];
-    if (!mine && Object.keys(members).length >= MAX_PLAYERS) { sync.leave(); code = null; throw new Error("La salle est pleine (10 personnes maximum)."); }
-    myName = o.name.trim();
+    if (!mine && Object.keys(members).length >= MAX_PLAYERS) fail("La table est pleine (10 personnes maximum).");
+    myName = (o.name || "").trim() || (o.gm ? "MJ" : "Joueur");
     const color = (mine && mine.color) || PALETTE[Object.keys(members).length % PALETTE.length];
     const upd = { ["members/" + uid()]: { name: myName, color, online: true, ts: (mine && mine.ts) || Date.now() } };
-    if (o.create) upd.meta = { name: o.game.trim(), gm: uid(), created: Date.now() };
+    if (!S.meta) upd.meta = { name: tbl ? tbl.name : code, gm: uid(), created: Date.now() };
     await write(upd);
-    try { localStorage.setItem("hacko.session", JSON.stringify({ code, name: myName })); } catch (e) {}
+    store.set("session", { code, name: myName, gm: !!o.gm }); store.set("name", myName);
     history.replaceState(null, "", "#" + code);
     $("#landing").hidden = true; $("#app").hidden = false;
     showTab("combat");
     render();
-  } catch (e) { code = null; err.textContent = e.message || String(e); }
+    if (H.Perso) H.Perso.onEnter();
+  } catch (e) { code = null; err.textContent = e.message || String(e); $("#landing").hidden = false; $("#app").hidden = true; }
+}
+
+function askGM(t) {
+  const email = h("input", { type: "email", placeholder: "ton.adresse@mail.com", autocomplete: "username", required: true, value: store.get("gmemail", "") });
+  const pw = h("input", { type: "password", placeholder: "mot de passe", autocomplete: "current-password", required: true, minlength: 6 });
+  const msg = h("p", { class: "err" });
+  const go = async mode => {
+    if (sync.mode === "firebase" && (!email.value || !pw.value)) return;
+    try {
+      msg.textContent = "Connexion…"; await ensureSync();
+      await sync.signInGM(email.value.trim(), pw.value, mode); if (email.value) store.set("gmemail", email.value.trim());
+      closeModal(); await enter({ code: t.code, name: $("#who-name").value || "MJ", gm: true });
+    } catch (e) { msg.textContent = e.message; }
+  };
+  const form = h("form", { onsubmit: e => { e.preventDefault(); go("login"); } },
+    h("h3", {}, "Je suis le MJ — " + t.name),
+    h("p", { class: "muted" }, sync.mode === "firebase" ? "Ton compte MJ te permet de retrouver ta table depuis n'importe quel appareil. Première fois : « Créer mon compte MJ »." : "Mode démo : aucun compte requis."),
+    sync.mode === "firebase" ? [h("label", {}, "E-mail", email), h("label", {}, "Mot de passe", pw)] : null, msg,
+    h("div", { class: "cmdrow" }, h("button", { class: "btn gold" }, "Me connecter"),
+      sync.mode === "firebase" ? h("button", { type: "button", class: "btn", onclick: () => go("create") }, "Créer mon compte MJ") : null));
+  openModal(form, "sm");
+}
+
+async function renderTables() {
+  const box = $("#tables"); box.replaceChildren(h("p", { class: "muted" }, "Chargement des tables…"));
+  let metas = {};
+  try { await ensureSync(); for (const t of TABLES) metas[t.code] = await sync.peek(t.code); } catch (e) { $("#land-err").textContent = "Connexion impossible : " + e.message; }
+  box.replaceChildren(...TABLES.map(t => {
+    const m = metas[t.code];
+    return h("div", { class: "ffwin tcard" }, h("div", { class: "wt" }, "TABLE"), h("h2", {}, (m && m.name) || t.name),
+      h("p", { class: "muted" }, m ? "Table ouverte — prête à rejoindre" : "Pas encore ouverte par le MJ"),
+      h("button", { class: "btn gold big-btn", disabled: !m, onclick: () => joinTable(t) }, "⚔ Rejoindre"),
+      h("button", { class: "btn ghost sm", onclick: () => askGM(t) }, "Je suis le MJ"));
+  }));
+}
+function joinTable(t) {
+  const name = $("#who-name").value.trim();
+  if (!name) { $("#land-err").textContent = "Écris d'abord ton prénom ou pseudo en haut."; $("#who-name").focus(); return; }
+  enter({ code: t.code, name });
 }
 
 function initLanding() {
-  const cfg = window.HACKO_FIREBASE;
-  $("#mode-note").textContent = sync.mode === "firebase"
-    ? "Connecté en temps réel (Firebase)."
-    : "Mode démo local : la synchro fonctionne entre les onglets de ce navigateur. Pour jouer à distance, configure Firebase (voir README).";
+  $("#mode-note").textContent = sync.mode === "firebase" ? "Connecté en temps réel." : "Mode démo local : la synchro marche entre les onglets de ce navigateur. Pour jouer à distance, configure Firebase (voir README).";
   $("#mode-note").classList.toggle("warn", sync.mode !== "firebase");
-  let last = null; try { last = JSON.parse(localStorage.getItem("hacko.session") || "null"); } catch (e) {}
+  $("#who-name").value = store.get("name", "");
+  $("#f-who").onsubmit = e => e.preventDefault();
+  $("#who-name").oninput = () => store.set("name", $("#who-name").value.trim());
+  const last = store.get("session");
   const hash = location.hash.replace("#", "").toUpperCase();
-  if (hash) $("#j-code").value = hash;
-  if (last) { $("#c-name").value = $("#j-name").value = last.name || ""; }
-  if (last && last.code) {
-    const r = $("#resume"); r.hidden = false;
-    r.append("Dernière salle : ", h("strong", {}, last.code), " ", h("button", { class: "btn sm", onclick: () => enter({ code: last.code, name: last.name || "Joueur" }) }, "Reprendre"));
-  }
-  $("#f-create").onsubmit = e => { e.preventDefault(); enter({ create: true, code: genCode(), name: $("#c-name").value, game: $("#c-game").value }); };
-  $("#f-join").onsubmit = e => { e.preventDefault(); enter({ code: $("#j-code").value, name: $("#j-name").value }); };
+  if (last && TABLES.some(t => t.code === last.code) && !(hash && hash !== last.code)) {
+    $("#land-err").textContent = "Reconnexion à ta table…";
+    enter(last).then(() => { if ($("#app").hidden) renderTables(); });
+  } else renderTables();
 }
 
 function leave() {
   if (code && sync) { write({ ["members/" + uid() + "/online"]: false }); sync.leave(); }
+  store.del("session");
   code = null; S = {}; H.state = S; sheetId = null; closeModal(); H.Battle.stop();
-  $("#app").hidden = true; $("#landing").hidden = false; history.replaceState(null, "", location.pathname);
+  $("#app").hidden = true; $("#landing").hidden = false; $("#land-err").textContent = "";
+  history.replaceState(null, "", location.pathname); renderTables();
 }
 
 /* ---------- Réception de l'état ---------- */
@@ -171,8 +219,9 @@ function render() {
 }
 
 function renderHeader() {
-  $("#room-name").textContent = S.meta.name;
-  $("#room-code").textContent = "# " + code;
+  const rn = $("#room-name"); rn.textContent = S.meta.name + (isGM() ? " ✎" : ""); rn.style.cursor = isGM() ? "pointer" : "default";
+  rn.onclick = isGM() ? () => { const n = prompt("Nom de la table :", S.meta.name); if (n && n.trim()) write({ "meta/name": n.trim().slice(0, 40) }); } : null;
+  $("#room-code").textContent = "🔗 Inviter";
   $("#role").textContent = isGM() ? "Maître du jeu" : "Joueur"; $("#role").className = "badge " + (isGM() ? "gm" : "");
   const ms = Object.entries(S.members || {});
   renderInto($("#members"), () => [ms.map(([id, m]) => h("span", { class: "mem" + (m.online === false ? " off" : ""), title: m.name + (S.meta.gm === id ? " (MJ)" : "") }, h("i", { style: "background:" + m.color }), S.meta.gm === id ? "👑 " : "", m.name)), h("span", { class: "count" }, `${ms.length}/${MAX_PLAYERS}`)]);
@@ -401,13 +450,10 @@ function quick(id, dir) {
 }
 
 /* ---------- Personnages ---------- */
-function newChar(enemyPreset) {
-  const id = sync.newId(), col = me().color || PALETTE[0];
-  write({ ["chars/" + id]: { name: "Nouveau héros", cls: "Guerrier", lvl: 1, hp: 12, maxHp: 12, mp: 0, maxMp: 0, ac: 12, initBonus: 0, owner: uid(), ownerName: myName, color: col, ts: Date.now(), inFight: true, acts: { [sync.newId()]: { n: "Attaque", d: "Arme au corps à corps" } } } });
-  openSheet(id);
-}
+function newChar() { if (H.Perso) H.Perso.openWizard({ gm: isGM() }); }
 function renderChars() {
   renderInto($("#char-bar"), () => [h("button", { class: "btn gold", onclick: () => newChar() }, "＋ Nouveau personnage"),
+    isGM() ? h("button", { class: "btn", onclick: () => H.Perso.openPremades() }, "📥 Personnages enregistrés") : h("button", { class: "btn", onclick: () => H.Perso.openWho() }, "🙋 Retrouver mon personnage"),
     isGM() ? h("select", { onchange: e => { const p = PRESETS.find(x => x.kind === e.target.value); if (p) addEnemy(p); e.target.value = ""; } }, h("option", { value: "" }, "＋ Ennemi / monstre…"), PRESETS.map(p => h("option", { value: p.kind }, p.name))) : null]);
   renderInto($("#char-grid"), () => {
     const list = chars().filter(c => !c.enemy || isGM()).sort((a, b) => (a.enemy ? 1 : 0) - (b.enemy ? 1 : 0) || (a.ts || 0) - (b.ts || 0));
@@ -415,17 +461,18 @@ function renderChars() {
     return list.map(c => {
       const pct = c.maxHp ? Math.max(0, Math.min(100, c.hp / c.maxHp * 100)) : 0;
       return h("div", { class: "ccard ffwin" + (c.hp <= 0 ? " ko" : "") + (c.enemy ? " foe" : ""), onclick: () => openSheet(c.id), style: `--c:${c.color || "#888"}` },
-        h("div", { class: "ctop" }, h("b", {}, c.name), h("span", { class: "muted" }, c.enemy ? "Ennemi" : `${c.cls || ""} ${c.lvl || 1}`)),
+        h("div", { class: "ctop" }, h("b", {}, c.name), h("span", { class: "muted" }, c.enemy ? "Ennemi" : `${c.race ? c.race + " " : ""}${c.cls || ""} ${c.lvl || 1}`)),
         h("div", { class: "bar" }, h("i", { style: `width:${pct}%`, class: pct < 25 ? "low" : pct < 50 ? "mid" : "" })),
-        h("div", { class: "cstat" }, h("span", {}, `PV ${c.hp}/${c.maxHp}`), c.maxMp ? h("span", {}, `PM ${c.mp ?? 0}/${c.maxMp}`) : null, h("span", {}, `CA ${c.ac ?? "–"}`)),
+        h("div", { class: "cstat" }, h("span", {}, `PV ${c.hp}/${c.maxHp}`), h("span", {}, `CA ${c.ac ?? "–"}`)),
         fxOf(c.id).length ? h("div", { class: "fxrow" }, fxChips(c.id)) : null,
         h("div", { class: "cconds" }, CONDS.filter(([k]) => (c.cond || {})[k]).map(([, e, l]) => h("span", { title: l }, e))),
-        h("div", { class: "owner muted" }, c.enemy ? "" : "👤 " + (c.ownerName || "?")));
+        h("div", { class: "owner muted" }, c.enemy ? "" : "👤 " + (c.ownerName || "?")),
+        H.Perso ? H.Perso.cardActions(c) : null);
     });
   });
 }
 
-function openSheet(id) { sheetId = id; openModal(h("div", { id: "sheet" }), "wide"); sheetId = id; renderSheet(); }
+function openSheet(id) { sheetId = id; sheetTab = "gen"; openModal(h("div", { id: "sheet" }), "wide"); sheetId = id; renderSheet(); }
 
 function renderSheet() {
   const c = S.chars && S.chars[sheetId];
@@ -441,18 +488,20 @@ function renderSheet() {
   renderInto(root, () => {
     const nItem = h("input", { placeholder: "Nouvel objet", maxlength: 40, disabled: !ed }), nQty = h("input", { type: "number", value: 1, min: 1, style: "width:4.5em", disabled: !ed });
     const nAct = h("input", { placeholder: "Nouvelle action (ex. Boule de feu)", maxlength: 40, disabled: !ed }), nDesc = h("input", { placeholder: "Description / dégâts", maxlength: 120, disabled: !ed });
-    return [
+    const gen = [
       h("div", { class: "sheet-head", style: `--c:${c.color || "#888"}` },
         txt("name", "Nom", { max: 30 }),
         c.enemy ? h("label", { class: "fld" }, "Type", h("select", { disabled: !ed, onchange: e => set("kind", e.target.value) }, H.Sprites.kinds.filter(k => PRESETS.some(p => p.kind === k)).map(k => h("option", { value: k, selected: c.kind === k }, PRESETS.find(p => p.kind === k).name))))
           : h("label", { class: "fld" }, "Classe", h("select", { disabled: !ed, onchange: e => set("cls", e.target.value) }, CLASSES.map(k => h("option", { selected: c.cls === k }, k)))),
         num("lvl", "Niveau", { min: 1, max: 30 }),
         h("label", { class: "fld" }, "Couleur", h("input", { type: "color", value: c.color || "#e8b84a", disabled: !ed, onchange: e => set("color", e.target.value) }))),
+      c.enemy ? null : h("div", { class: "two" }, txt("race", "Race"), txt("scls", "Sous-classe / voie")),
+      H.Perso ? H.Perso.genActions({ c: { ...c, id }, id, ed, set }) : null,
       h("div", { class: "fxbox" }, h("b", {}, "⚑ Effets du MJ"), fxOf(id).length ? h("div", { class: "fxrow" }, fxChips(id, true)) : h("span", { class: "muted" }, "Aucun effet en cours"),
         isGM() ? h("button", { class: "btn sm", onclick: () => openFx(id) }, "＋ Ajouter un effet") : null),
       h("div", { class: "hpline" }, h("b", {}, "PV"), hpBtn(-5), hpBtn(-1), h("span", { class: "hpnum" }, `${c.hp} / `, ed ? h("input", { class: "inl-num", type: "number", value: c.maxHp, onchange: e => set("maxHp", Math.max(1, parseInt(e.target.value) || 1)) }) : c.maxHp), hpBtn(1), hpBtn(5),
         h("button", { class: "btn sm", onclick: () => set("hp", c.maxHp), disabled: !ed }, "Plein")),
-      h("div", { class: "stats" }, num("mp", "PM", { min: 0 }), num("maxMp", "PM max", { min: 0 }), num("ac", "CA"), num("initBonus", "Bonus init."),
+      h("div", { class: "stats" }, num("ac", "CA"), num("initBonus", "Bonus init."),
         h("label", { class: "fld" }, "Initiative", h("span", { class: "row" }, h("input", { type: "number", value: c.init ?? "", disabled: !ed, onchange: e => set("init", e.target.value === "" ? null : parseInt(e.target.value)) }),
           h("button", { class: "btn sm", disabled: !ed, title: "Lancer d20 + bonus", onclick: () => { const r = d(20), t = r + (c.initBonus || 0); set("init", t); log(`🎲 Initiative de ${c.name} : ${r}${sign(c.initBonus || 0)} = ${t}`); } }, "🎲")))),
       h("h4", {}, "États"),
@@ -476,6 +525,8 @@ function renderSheet() {
         isGM() && !c.enemy ? h("label", { class: "inl" }, h("input", { type: "checkbox", checked: c.inFight !== false, onchange: e => set("inFight", e.target.checked) }), " Dans le combat") : null,
         ed ? h("button", { class: "btn danger sm", onclick: () => { if (confirm(`Supprimer ${c.name} ?`)) { write(isGM() ? { ["chars/" + id]: null, ["fx/" + id]: null } : { ["chars/" + id]: null }); closeModal(); } } }, "Supprimer") : null)
     ];
+    if (c.enemy || !H.Perso) return gen;
+    return [H.Perso.tabbar(sheetTab, t => { sheetTab = t; renderSheet(); }), sheetTab === "gen" ? gen : H.Perso.tab(sheetTab, { c: { ...c, id }, id, ed, set })];
   });
 }
 
@@ -521,7 +572,7 @@ function init() {
   $("#tabs").onclick = e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); };
   $("#leave").onclick = leave;
   $("#room-code").onclick = () => {
-    const url = location.origin + location.pathname + "#" + code;
+    const url = location.origin + location.pathname;
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast("Lien d'invitation copié 📋"), () => prompt("Lien d'invitation :", url));
   };
   $("#note-tag").append(...TAGS.map(t => h("option", {}, t)));

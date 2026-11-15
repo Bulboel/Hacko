@@ -14,7 +14,7 @@
         },
         "chars": {
           "$cid": {
-            ".write": "auth != null && (root.child('rooms/' + $room + '/meta/gm').val() === auth.uid || data.child('owner').val() === auth.uid || (!data.exists() && newData.child('owner').val() === auth.uid))",
+            ".write": "auth != null && (root.child('rooms/' + $room + '/meta/gm').val() === auth.uid || data.child('owner').val() === auth.uid || (!data.exists() && newData.child('owner').val() === auth.uid) || (data.child('free').val() === true && newData.child('owner').val() === auth.uid && root.child('rooms/' + $room + '/members/' + auth.uid).exists()))",
             "hp": {
               ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
             }

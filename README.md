@@ -20,23 +20,27 @@ Sans configuration, la synchro marche entre **les onglets du même navigateur** 
 
 ### Jouer à distance : activer Firebase (gratuit, ~5 min)
 1. Va sur <https://console.firebase.google.com> → **Ajouter un projet**.
-2. **Build → Authentication → Sign-in method** : active **Anonyme**.
+2. **Authentication → Sign-in method** : active **Anonyme** *et* **E-mail/Mot de passe** (ce dernier sert au compte MJ).
 3. **Build → Realtime Database → Créer une base** (choisis la région Europe).
 4. Onglet **Règles** : colle le contenu de [`database.rules.json`](database.rules.json) puis **Publier**.
 5. **Paramètres du projet → Vos applications → Web (`</>`)** : copie l'objet de config dans [`firebase-config.js`](firebase-config.js) (la clé web est publique par conception ; la sécurité vient des règles).
 6. Authentication → Settings → **Domaines autorisés** : ajoute ton domaine GitHub Pages (`<utilisateur>.github.io`).
 
 ### Utilisation
-1. Le MJ clique **Créer une partie** et partage le **lien d'invitation** (clic sur `# CODE` en haut).
-2. Les joueurs ouvrent le lien, saisissent leur nom, créent leur personnage (onglet *Personnages*).
-3. Le MJ ajoute les ennemis, choisit le décor, clique **Lancer le combat**. À son tour, un joueur a un menu : *Attaquer / Actions / Objets / Fin de tour*.
+Il y a **deux tables fixes** : *La compagnie du rêve* et *Seconde table* (le MJ peut les renommer en cliquant sur le nom en haut). Pas de code à saisir.
+
+**MJ** : sur la page d'accueil, clique sur *Je suis le MJ* sous ta table, puis *Créer mon compte MJ* (e-mail + mot de passe, une seule fois) : ce compte te rend ta table sur n'importe quel appareil. Ensuite, dans *Personnages* : **📥 Personnages enregistrés** ajoute d'un clic les fiches déjà prêtes (Bolduc, Eberien, Jhimm).
+
+**Joueurs** : ouvrent le site, écrivent leur prénom, cliquent sur *Rejoindre*. Un écran *« Qui es-tu ? »* propose les personnages qui attendent leur joueur (le leur est mis en avant) : un clic sur **C'est moi** et tout est rempli. Pas de personnage prêt ? L'**assistant de création** demande race, classe, sous-classe et niveau, puis propose automatiquement capacités, emplacements de sorts et sorts disponibles. Ils retrouvent leur personnage à chaque visite ; *💾 Enregistrer sur cet appareil* et *⬇ Exporter la fiche* servent de sauvegarde.
+
+**Fiche** : onglets *Général* (PV, CA, initiative, effets du MJ, inventaire, actions), *Caractéristiques* (modificateurs, sauvegardes, compétences), *Sorts* (emplacements à cocher, sorts préparés, bouton *Lancer* qui consomme l'emplacement), *Capacités*, *Histoire*. *⬆ Monter de niveau* met à jour PV, emplacements et capacités.
 
 ## Modèle de confiance (règles de la base)
 - Max. 10 membres par salle : limite appliquée par l'application (Firebase ne sait pas compter les membres dans ses règles).
-- Un personnage n'est modifiable que par son joueur et le MJ — **sauf les PV**, que tout membre peut changer (pour que les joueurs puissent infliger des dégâts aux ennemis, comme à une vraie table).
+- Un personnage n'est modifiable que par son joueur et le MJ (un personnage « à réclamer » peut être pris par n'importe quel membre de la table) — **sauf les PV**, que tout membre peut changer (pour que les joueurs puissent infliger des dégâts aux ennemis, comme à une vraie table).
 - Les effets du MJ (`fx`) ne sont modifiables que par le MJ.
 - Une note n'est supprimable que par son auteur ou le MJ.
-- Les codes de salle sont courts : n'importe qui connaissant le code peut *lire* la salle. Ne mets rien de sensible dedans.
+- Les deux tables ont des adresses fixes : quiconque connaît l'adresse du site peut entrer comme joueur. C'est pensé pour un groupe d'amis ; ne mets rien de sensible dedans.
 
 ## Données du lexique
 Source : **SRD 5.1** sous Open Game License 1.0a, via [5e-bits/5e-database](https://github.com/5e-bits/5e-database) (MIT). Sorts, objets, classes, races et règles sont en français ; le SRD n'a pas de monstres ni d'objets magiques en français : leurs noms et caractéristiques sont traduits, les textes des capacités restent en anglais. Pour régénérer : `python3 tools/build-lexique.py <5e-database>/src/2014 data/`.
@@ -52,6 +56,8 @@ js/sprites.js       sprites pixel art dessinés par code
 js/battle.js        scène de combat 2D (canvas)
 js/app.js           logique et interface
 js/lexique.js       onglet Lexique (recherche, filtres, ajout au jeu)
+js/persos.js        création de personnage, fiche à onglets, sorts, réclamation
+data/premades.js    fiches pré-enregistrées des joueurs
 data/               données du lexique (générées)
 tools/              script de génération des données
 ```

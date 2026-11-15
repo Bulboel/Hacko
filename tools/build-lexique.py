@@ -60,7 +60,7 @@ for s in L("fr-FR", "Spells"):
     comp = ", ".join(s["components"]) + (f" ({s['material']})" if s.get("material") else "")
     f = [["Incantation", s["casting_time"]], ["Portée", s["range"]], ["Composantes", comp], ["Durée", ("Concentration, " if s.get("concentration") else "") + s["duration"]], ["Classes", ", ".join(c["name"] for c in s["classes"])]]
     d = list(s["desc"]) + ([ "Aux niveaux supérieurs. " + " ".join(s["higher_level"]) ] if s.get("higher_level") else [])
-    spl.append({"n": s["name"], "a": s["index"].replace("-", " "), "s": sub, "lv": lvl, "sc": school, "cl": [c["name"] for c in s["classes"]], "f": f, "d": d})
+    spl.append({"i": s["index"], "ci": [c["index"] for c in s["classes"]], "n": s["name"], "a": s["index"].replace("-", " "), "s": sub, "lv": lvl, "sc": school, "cl": [c["name"] for c in s["classes"]], "f": f, "d": d})
 js("spl", spl)
 
 # ---------------- Classes, races, règles (FR) ----------------
@@ -88,6 +88,32 @@ reg = []
 for c in L("fr-FR", "Conditions"): reg.append({"n": c["name"], "a": c["index"], "s": "État", "f": [], "d": c["desc"]})
 for rs in L("fr-FR", "Rule-Sections"): reg.append({"n": rs["name"], "a": rs["index"].replace("-", " "), "s": "Règle", "f": [], "d": [x for x in rs["desc"].split("\n") if x.strip()]})
 js("cls", cls); js("rac", rac); js("reg", reg)
+
+# ---------------- Données de création de personnage ----------------
+AB6 = {"str": "for", "dex": "dex", "con": "con", "int": "int", "wis": "sag", "cha": "cha"}
+SKI = {"acrobatics": "acrobaties", "arcana": "arcanes", "athletics": "athletisme", "stealth": "discretion", "animal-handling": "dressage", "sleight-of-hand": "escamotage", "history": "histoire", "intimidation": "intimidation", "insight": "intuition", "investigation": "investigation", "medicine": "medecine", "nature": "nature", "perception": "perception", "persuasion": "persuasion", "religion": "religion", "performance": "representation", "survival": "survie", "deception": "tromperie"}
+CLSFIX = {"fighter": "Guerrier"}
+subs_fr = L("fr-FR", "Subclasses")
+gen = {"cls": {}, "lvl": {}, "feat": [], "rac": {}, "sub": []}
+for c in L("fr-FR", "Classes"):
+    ch = (c.get("proficiency_choices") or [{}])[0]
+    skl = [SKI.get(o["item"]["index"].replace("skill-", ""), "") for o in (ch.get("from", {}).get("options", []) if ch else []) if o.get("item")]
+    gen["cls"][c["index"]] = {"n": CLSFIX.get(c["index"], c["name"]), "hd": c["hit_die"], "sv": [AB6[x["index"]] for x in c["saving_throws"]],
+        "ab": AB6.get((c.get("spellcasting") or {}).get("spellcasting_ability", {}).get("index")), "skn": ch.get("choose", 0) if ch else 0, "skl": [x for x in skl if x],
+        "sc": [{"i": x["index"], "n": x["name"]} for x in subs_fr if x["class"]["index"] == c["index"]]}
+for l in L("fr-FR", "Levels"):
+    if l.get("subclass"): continue
+    sc = l.get("spellcasting") or {}
+    gen["lvl"].setdefault(l["class"]["index"], {})[l["level"]] = {"pb": l["prof_bonus"], "s": [sc.get(f"spell_slots_level_{i}", 0) for i in range(1, 10)], "c": sc.get("cantrips_known", 0), "k": sc.get("spells_known", 0)}
+for f in feats:
+    gen["feat"].append({"c": f["class"]["index"], "sc": (f.get("subclass") or {}).get("index"), "l": f["level"], "n": f["name"], "d": f["desc"]})
+def abm(r): return {AB6[a["ability_score"]["index"]]: a["bonus"] for a in r.get("ability_bonuses", [])}
+for r in L("fr-FR", "Races"):
+    gen["rac"][r["index"]] = {"n": r["name"], "spd": r["speed"], "ab": abm(r), "tr": [{"n": t["name"], "d": t["desc"]} for t in traits if any(x["index"] == r["index"] for x in t.get("races", []))]}
+for sr in L("fr-FR", "Subraces"):
+    gen["sub"].append({"i": sr["index"], "n": sr["name"], "r": sr["race"]["index"], "ab": abm(sr), "tr": [{"n": t["name"], "d": t["desc"]} for t in traits if any(x["index"] == sr["index"] for x in t.get("subraces", []))]})
+js("gen", gen)
+
 
 # ---------------- Monstres (EN, noms/champs FR) ----------------
 exec(open(os.path.join(os.path.dirname(__file__), "monstres-fr.py")).read())  # définit NAMES, fr_name()
