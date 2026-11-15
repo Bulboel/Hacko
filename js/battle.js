@@ -138,6 +138,10 @@ window.H = window.H || {};
       const conds = Object.keys(c.cond || {}).filter(k => CONDS[k]);
       if (conds.length && !ko) { ctx.font = "9px serif"; ctx.textAlign = "center"; ctx.fillStyle = "#fff"; ctx.fillText(conds.map(k => CONDS[k]).join(""), s.x + ox, s.y - 30 * u - 14); }
 
+      // effets du MJ (▲ avantage, ▼ désavantage, ＋ bonus, － malus)
+      const fxs = H.fxOf ? H.fxOf(id) : [];
+      if (fxs.length && !ko) fxs.slice(0, 4).forEach((e, i, a) => outlineText({ adv: "▲", dis: "▼", bonus: "+", malus: "-", note: "✎" }[e.k] || "✎", s.x + ox + (i - (a.length - 1) / 2) * 10, s.y - 30 * u - 26, { adv: "#5af07a", bonus: "#5af07a", dis: "#ff6a6a", malus: "#ff6a6a" }[e.k] || "#ffd84a", 9));
+
       // curseur du tour ou de la cible
       const isHover = hover === id && targetMode;
       if (active || isHover) {

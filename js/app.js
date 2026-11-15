@@ -34,6 +34,9 @@ const TAGS = ["Lieu", "PNJ", "Quête", "Objet", "Indice", "Autre"];
 const BGS = [["plaine", "Plaine"], ["foret", "Forêt"], ["donjon", "Donjon"], ["nuit", "Nuit"]];
 const PALETTE = ["#e8b84a", "#5ab0ff", "#ff7a7a", "#6adf8a", "#c88aff", "#ff9a4a", "#4adfd0", "#ff8ac8", "#b0d84a", "#9aa8ff"];
 const MAX_PLAYERS = 10;
+/* Effets posés par le MJ (stockés dans fx/<perso>/<id> : écriture réservée au MJ par les règles) */
+const FXK = { adv: ["▲", "Avantage", "good"], dis: ["▼", "Désavantage", "bad"], bonus: ["＋", "Bonus", "good"], malus: ["－", "Malus", "bad"], note: ["✎", "Note", "note"] };
+const FX_PRESETS = [["adv", "aux jets d'attaque"], ["dis", "aux jets d'attaque"], ["adv", "aux tests de Perception"], ["adv", "aux jets de sauvegarde"], ["dis", "aux jets de sauvegarde"], ["dis", "aux tests de caractéristique"], ["bonus", "+1d4 aux jets (Bénédiction)"], ["malus", "−1d4 aux jets (Fléau)"], ["bonus", "+1d6 (Inspiration bardique)"], ["note", "Résistance aux dégâts de feu"]];
 
 /* ---------- État ---------- */
 let sync, ready = false, code = null, myName = "", tab = "combat";
@@ -126,9 +129,13 @@ function leave() {
 
 /* ---------- Réception de l'état ---------- */
 function onState(s) {
-  const prevNotes = Object.keys(S.notes || {}).length;
+  const prevNotes = Object.keys(S.notes || {}).length, had = !!S.meta, prevFx = S.fx || {};
   S = s || {}; H.state = S;
   if (!code) return;
+  if (had) for (const [cid, list] of Object.entries(S.fx || {})) {
+    const c = (S.chars || {})[cid];
+    if (c && c.owner === uid() && !c.enemy && !isGM()) for (const [fid, e] of Object.entries(list)) if (!(prevFx[cid] || {})[fid]) toast(`⚑ MJ → ${c.name} : ${fxLabel(e)}`, FXK[e.k] && FXK[e.k][2] === "bad" ? "err" : "good");
+  }
   if (tab !== "notes") {
     const n = Object.keys(S.notes || {}).length;
     if (n > prevNotes && prevNotes) toast("📜 Nouvelle note de la table");
@@ -146,6 +153,7 @@ function showTab(t) {
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
   document.querySelectorAll(".tab").forEach(s => s.hidden = s.id !== "tab-" + t);
   if (t === "combat") H.Battle.start(); else H.Battle.stop();
+  if (t === "lex") H.Lex.open();
   if (t === "notes") { try { localStorage.setItem("hacko.seen." + code, Object.keys(S.notes || {}).length); } catch (e) {} }
   render();
 }
@@ -170,6 +178,38 @@ function renderHeader() {
   renderInto($("#members"), () => [ms.map(([id, m]) => h("span", { class: "mem" + (m.online === false ? " off" : ""), title: m.name + (S.meta.gm === id ? " (MJ)" : "") }, h("i", { style: "background:" + m.color }), S.meta.gm === id ? "👑 " : "", m.name)), h("span", { class: "count" }, `${ms.length}/${MAX_PLAYERS}`)]);
 }
 
+/* ---------- Effets du MJ ---------- */
+function fxOf(id) {
+  const r = combat().active ? (combat().round || 1) : 0;
+  return Object.entries((S.fx || {})[id] || {}).map(([k, v]) => ({ ...v, id: k })).filter(e => !(e.u && r > e.u)).sort((a, b) => a.ts - b.ts);
+}
+H.fxOf = fxOf;
+const fxLabel = e => `${(FXK[e.k] || FXK.note)[1]} ${e.t || ""}`.trim();
+function fxChips(id, del) {
+  return fxOf(id).map(e => h("span", { class: "fx " + (FXK[e.k] || FXK.note)[2], title: fxLabel(e) }, (FXK[e.k] || FXK.note)[0] + " " + fxLabel(e), e.u ? h("small", {}, ` (jusqu'au round ${e.u})`) : null,
+    del && isGM() ? h("button", { class: "x2", title: "Retirer", onclick: ev => { ev.stopPropagation(); write({ [`fx/${id}/${e.id}`]: null }); log(`⚑ ${(S.chars[id] || {}).name} : « ${fxLabel(e)} » retiré`); } }, "✕") : null));
+}
+function openFx(id) {
+  const c = S.chars[id]; if (!c || !isGM()) return;
+  let kind = "adv";
+  const txt = h("input", { maxlength: 120, placeholder: "ex. aux tests de Perception", autofocus: true });
+  const inCombat = !!combat().active;
+  const dur = h("select", { disabled: !inCombat }, h("option", { value: "" }, "Jusqu'à retrait"), [1, 2, 3, 5, 10].map(n => h("option", { value: n }, `${n} round${n > 1 ? "s" : ""}`)));
+  const seg = h("div", { class: "seg wrap" }, Object.entries(FXK).map(([k, [ic, l]]) => h("button", { type: "button", "data-k": k, class: k === kind ? "on" : "", onclick: () => { kind = k; seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.k === k)); } }, ic + " " + l)));
+  const setKind = k => { kind = k; seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.k === k)); };
+  const form = h("form", { onsubmit: ev => {
+    ev.preventDefault(); const t = txt.value.trim(); if (!t && kind !== "adv" && kind !== "dis") return;
+    const u = dur.value ? (combat().round || 1) + (+dur.value) - 1 : null;
+    write({ [`fx/${id}/${sync.newId()}`]: { k: kind, t, u, ts: Date.now() } });
+    log(`⚑ MJ → ${c.name} : ${fxLabel({ k: kind, t })}${u ? ` (jusqu'au round ${u})` : ""}`);
+    closeModal();
+  } }, h("h3", {}, "⚑ Effet sur " + c.name), h("p", { class: "muted" }, "Visible sur sa fiche et dans le combat. Le joueur est prévenu."), seg,
+  h("label", {}, "Précision", txt),
+  h("div", { class: "chips" }, FX_PRESETS.map(([k, t]) => h("button", { type: "button", class: "chip", onclick: () => { setKind(k); txt.value = t; } }, FXK[k][0] + " " + t))),
+  h("label", {}, "Durée", dur), h("button", { class: "btn gold" }, "Appliquer"));
+  openModal(form, "sm"); setTimeout(() => txt.focus(), 30);
+}
+
 /* ---------- Combat : logique ---------- */
 function combatants() {
   return chars().filter(c => c.enemy || c.inFight !== false)
@@ -184,11 +224,12 @@ function applyHp(id, delta) {
 }
 function hpText(delta) { return delta < 0 ? `−${-delta} PV` : `+${delta} PV`; }
 
-function addEnemy(p) {
-  const same = chars().filter(c => c.enemy && c.kind === p.kind).length;
+function addEnemy(p, extra = 0) {
+  const same = chars().filter(c => c.enemy && (c.name === p.name || c.name.startsWith(p.name + " "))).length;
   const id = sync.newId(), act = combat().active;
-  const c = { name: same ? `${p.name} ${same + 1}` : p.name, enemy: true, kind: p.kind, hp: p.hp, maxHp: p.hp, ac: p.ac, initBonus: p.bonus, owner: uid(), ts: Date.now(), cond: null };
+  const c = { name: same ? `${p.name} ${same + 1}` : p.name, enemy: true, kind: p.kind, hp: p.hp, maxHp: p.hp, ac: p.ac, initBonus: p.bonus, owner: uid(), ts: Date.now() + extra, cond: null };
   if (act) c.init = d(20) + p.bonus;
+  if (p.acts && p.acts.length) { c.acts = {}; p.acts.forEach((a, i) => c.acts[sync.newId() + i] = { n: a.n, d: a.d || "" }); }
   write({ ["chars/" + id]: c });
   log(`👹 ${c.name} apparaît !`);
 }
@@ -225,7 +266,7 @@ function nextTurn() {
 function endCombat() {
   if (!confirm("Terminer le combat ? Les ennemis seront retirés.")) return;
   const upd = { "combat/active": false, "combat/turn": null, "combat/round": null };
-  chars().filter(c => c.enemy).forEach(c => upd["chars/" + c.id] = null);
+  chars().filter(c => c.enemy).forEach(c => { upd["chars/" + c.id] = null; upd["fx/" + c.id] = null; });
   write(upd); log("🏁 Fin du combat.");
 }
 
@@ -271,7 +312,8 @@ function renderHud(order, turnId, active) {
         h("span", { class: "nm" }, c.id === turnId && active ? "▶ " : "", c.name),
         h("span", { class: "bar" }, h("i", { style: `width:${c.maxHp ? Math.max(0, Math.min(100, c.hp / c.maxHp * 100)) : 0}%`, class: c.hp / c.maxHp < .25 ? "low" : c.hp / c.maxHp < .5 ? "mid" : "" })),
         h("span", { class: "hp" }, `${c.hp}/${c.maxHp}`),
-        c.maxMp ? h("span", { class: "mp" }, `PM ${c.mp ?? 0}`) : null)))
+        c.maxMp ? h("span", { class: "mp" }, `PM ${c.mp ?? 0}`) : null,
+        fxOf(c.id).length ? h("span", { class: "fxdots" }, fxOf(c.id).map(e => h("i", { class: (FXK[e.k] || FXK.note)[2], title: fxLabel(e) }, (FXK[e.k] || FXK.note)[0]))) : null)))
   ]);
 }
 
@@ -293,7 +335,7 @@ function renderMenu(order, active, turnId) {
     order.map(c => h("button", { class: "mbtn tgt" + (c.enemy ? " foe" : ""), onclick: () => onTarget(c.id) }, c.name, c.id === turnId ? " (soi)" : "")),
     h("button", { class: "mbtn dim", onclick: () => { logPending(menu.pending, null); setMenu("main"); } }, "Sans cible")];
   H.Battle.setTargetMode(menu.screen === "target");
-  el.replaceChildren(h("div", { class: "ffwin cmd" }, h("div", { class: "wt" }, `TOUR DE ${cur.name.toUpperCase()}`), h("div", { class: "cmdrow" }, body)));
+  el.replaceChildren(h("div", { class: "ffwin cmd" }, h("div", { class: "wt" }, `TOUR DE ${cur.name.toUpperCase()}`), fxOf(turnId).length ? h("div", { class: "fxrow" }, fxChips(turnId)) : null, h("div", { class: "cmdrow" }, body)));
 }
 function setMenu(screen, pending = null) { menu = { screen, pending }; renderMenu(combatants(), true, combat().turn); }
 
@@ -343,7 +385,9 @@ function openQuick(id) {
     return [h("h3", {}, cc.name), h("p", { class: "muted" }, cc.enemy ? "Ennemi" : `${cc.cls || ""} niv. ${cc.lvl || 1}`, " · ", hpTxt),
       h("label", {}, "Montant", h("input", { id: "qamt", type: "number", min: "1", value: amt, class: "big", inputmode: "numeric" })),
       h("div", { class: "cmdrow" }, h("button", { class: "btn danger", onclick: () => quick(id, -1) }, "💥 Dégâts"), h("button", { class: "btn good", onclick: () => quick(id, 1) }, "💚 Soins"),
-        h("button", { class: "btn", onclick: () => { closeModal(); openSheet(id); } }, "📋 Fiche"))];
+        h("button", { class: "btn", onclick: () => { closeModal(); openSheet(id); } }, "📋 Fiche"),
+        isGM() ? h("button", { class: "btn", onclick: () => { closeModal(); openFx(id); } }, "⚑ Effet") : null),
+      fxOf(id).length ? h("div", { class: "fxrow" }, fxChips(id, true)) : null];
   };
   const box = h("div", {}, body());
   openModal(box, "sm");
@@ -374,6 +418,7 @@ function renderChars() {
         h("div", { class: "ctop" }, h("b", {}, c.name), h("span", { class: "muted" }, c.enemy ? "Ennemi" : `${c.cls || ""} ${c.lvl || 1}`)),
         h("div", { class: "bar" }, h("i", { style: `width:${pct}%`, class: pct < 25 ? "low" : pct < 50 ? "mid" : "" })),
         h("div", { class: "cstat" }, h("span", {}, `PV ${c.hp}/${c.maxHp}`), c.maxMp ? h("span", {}, `PM ${c.mp ?? 0}/${c.maxMp}`) : null, h("span", {}, `CA ${c.ac ?? "–"}`)),
+        fxOf(c.id).length ? h("div", { class: "fxrow" }, fxChips(c.id)) : null,
         h("div", { class: "cconds" }, CONDS.filter(([k]) => (c.cond || {})[k]).map(([, e, l]) => h("span", { title: l }, e))),
         h("div", { class: "owner muted" }, c.enemy ? "" : "👤 " + (c.ownerName || "?")));
     });
@@ -403,6 +448,8 @@ function renderSheet() {
           : h("label", { class: "fld" }, "Classe", h("select", { disabled: !ed, onchange: e => set("cls", e.target.value) }, CLASSES.map(k => h("option", { selected: c.cls === k }, k)))),
         num("lvl", "Niveau", { min: 1, max: 30 }),
         h("label", { class: "fld" }, "Couleur", h("input", { type: "color", value: c.color || "#e8b84a", disabled: !ed, onchange: e => set("color", e.target.value) }))),
+      h("div", { class: "fxbox" }, h("b", {}, "⚑ Effets du MJ"), fxOf(id).length ? h("div", { class: "fxrow" }, fxChips(id, true)) : h("span", { class: "muted" }, "Aucun effet en cours"),
+        isGM() ? h("button", { class: "btn sm", onclick: () => openFx(id) }, "＋ Ajouter un effet") : null),
       h("div", { class: "hpline" }, h("b", {}, "PV"), hpBtn(-5), hpBtn(-1), h("span", { class: "hpnum" }, `${c.hp} / `, ed ? h("input", { class: "inl-num", type: "number", value: c.maxHp, onchange: e => set("maxHp", Math.max(1, parseInt(e.target.value) || 1)) }) : c.maxHp), hpBtn(1), hpBtn(5),
         h("button", { class: "btn sm", onclick: () => set("hp", c.maxHp), disabled: !ed }, "Plein")),
       h("div", { class: "stats" }, num("mp", "PM", { min: 0 }), num("maxMp", "PM max", { min: 0 }), num("ac", "CA"), num("initBonus", "Bonus init."),
@@ -427,7 +474,7 @@ function renderSheet() {
       h("div", { class: "sheet-foot" },
         c.enemy ? null : h("span", { class: "muted" }, "Joué par " + (c.ownerName || "?")),
         isGM() && !c.enemy ? h("label", { class: "inl" }, h("input", { type: "checkbox", checked: c.inFight !== false, onchange: e => set("inFight", e.target.checked) }), " Dans le combat") : null,
-        ed ? h("button", { class: "btn danger sm", onclick: () => { if (confirm(`Supprimer ${c.name} ?`)) { write({ ["chars/" + id]: null }); closeModal(); } } }, "Supprimer") : null)
+        ed ? h("button", { class: "btn danger sm", onclick: () => { if (confirm(`Supprimer ${c.name} ?`)) { write(isGM() ? { ["chars/" + id]: null, ["fx/" + id]: null } : { ["chars/" + id]: null }); closeModal(); } } }, "Supprimer") : null)
     ];
   });
 }

@@ -6,6 +6,8 @@ Un outil pour mener tes parties de jeu de rôle **en direct, à 10 personnes max
 - 🎯 **Initiative & tours** : jet d'initiative (d20 + bonus), ordre des tours, rounds, bouton « Tour suivant ».
 - 🧙 **Fiches modifiables en direct** : PV/PM, CA, états (empoisonné, étourdi…), inventaire avec quantités, actions possibles. Chacun édite *ses* personnages ; le MJ édite tout.
 - 💥 **Dégâts / soins** en un clic (sur le terrain, la liste d'ordre ou la fiche). Les joueurs ne voient pas les PV exacts des ennemis (seulement « Blessé », « Critique »…).
+- ⚑ **Effets du MJ** : le MJ pose sur n'importe quel personnage un *avantage*, un *désavantage*, un *bonus*, un *malus* ou une *note* (« aux tests de Perception », « −1d4 aux jets »…), avec une durée en rounds si besoin. L'effet s'affiche sur la fiche, dans le menu de tour, sur le terrain et dans la liste du groupe, et le joueur est prévenu.
+- 📚 **Lexique** : recherche instantanée (quelques lettres suffisent, accents ignorés, noms français ou anglais) dans le SRD 5.1 : 334 monstres, 237 objets avec prix, 362 objets magiques, 319 sorts, classes, races, règles et états. Filtres (type, FP, catégorie, prix, rareté, niveau, école, classe), tri, flèches ↑↓ pour parcourir. Depuis une fiche : *ajouter au combat* (×N, avec PV, CA, initiative et attaques), *ajouter à l'inventaire*, *ajouter aux actions*.
 - 📜 **Notes partagées** : n'importe qui publie (lieu, PNJ, quête, objet, indice), tout le monde lit, recherche et filtre.
 - 🎲 **Dés & journal automatique** : d4 → d100 avec bonus, tout est consigné dans le journal commun. Export JSON de la partie pour le MJ.
 
@@ -32,8 +34,12 @@ Sans configuration, la synchro marche entre **les onglets du même navigateur** 
 ## Modèle de confiance (règles de la base)
 - Max. 10 membres par salle : limite appliquée par l'application (Firebase ne sait pas compter les membres dans ses règles).
 - Un personnage n'est modifiable que par son joueur et le MJ — **sauf les PV**, que tout membre peut changer (pour que les joueurs puissent infliger des dégâts aux ennemis, comme à une vraie table).
+- Les effets du MJ (`fx`) ne sont modifiables que par le MJ.
 - Une note n'est supprimable que par son auteur ou le MJ.
 - Les codes de salle sont courts : n'importe qui connaissant le code peut *lire* la salle. Ne mets rien de sensible dedans.
+
+## Données du lexique
+Source : **SRD 5.1** sous Open Game License 1.0a, via [5e-bits/5e-database](https://github.com/5e-bits/5e-database) (MIT). Sorts, objets, classes, races et règles sont en français ; le SRD n'a pas de monstres ni d'objets magiques en français : leurs noms et caractéristiques sont traduits, les textes des capacités restent en anglais. Pour régénérer : `python3 tools/build-lexique.py <5e-database>/src/2014 data/`.
 
 ## Structure
 ```
@@ -45,6 +51,9 @@ js/sync.js          couche temps réel (Firebase ou local)
 js/sprites.js       sprites pixel art dessinés par code
 js/battle.js        scène de combat 2D (canvas)
 js/app.js           logique et interface
+js/lexique.js       onglet Lexique (recherche, filtres, ajout au jeu)
+data/               données du lexique (générées)
+tools/              script de génération des données
 ```
 
 > L'ancien prototype narratif solo « Hackénia » reste consultable dans l'historique git (commit `eef0a9e`).

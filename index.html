@@ -52,6 +52,7 @@
     <button data-tab="combat" class="on">⚔ Combat</button>
     <button data-tab="chars">🧙 Personnages</button>
     <button data-tab="notes">📜 Notes <i id="nb-notes"></i></button>
+    <button data-tab="lex">📚 Lexique</button>
     <button data-tab="log">🎲 Journal</button>
   </nav>
 
@@ -80,6 +81,19 @@
       <div id="note-feed" class="feed"></div>
     </section>
 
+    <section id="tab-lex" class="tab" hidden>
+      <div class="ffwin lexhead">
+        <input id="lex-q" type="search" autocomplete="off" placeholder="Tape quelques lettres : gobelin, épée longue, boule de feu, paladin…">
+        <div id="lex-cats" class="filters"></div>
+        <div id="lex-filters" class="lexfilters"></div>
+      </div>
+      <div class="lexgrid">
+        <div id="lex-list" class="lexlist"></div>
+        <div id="lex-detail" class="lexdetail ffwin"></div>
+      </div>
+      <p class="muted small">Source : SRD 5.1 (Open Game License 1.0a). Sorts, objets, classes, races et règles en français ; monstres et objets magiques : noms et caractéristiques en français, textes des capacités en anglais.</p>
+    </section>
+
     <section id="tab-log" class="tab" hidden>
       <div class="ffwin diceform">
         <div class="dice" id="dice"></div>
@@ -102,5 +116,6 @@
 <script src="js/sprites.js"></script>
 <script src="js/battle.js"></script>
 <script src="js/app.js"></script>
+<script src="js/lexique.js"></script>
 </body>
 </html>

@@ -147,3 +147,37 @@ label.inl{display:inline-flex;align-items:center;gap:6px;text-transform:none;fon
   #top{padding:8px 10px}.mbtn.end{margin-left:0}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Effets du MJ */
+.fxrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fx{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:2px 10px;font-size:13px;font-weight:600;border:1px solid}
+.fx.good{background:#12502a;border-color:#4cd47a;color:#c8ffd9}.fx.bad{background:#5a1a1a;border-color:#ee5a5a;color:#ffd0d0}.fx.note{background:#3a3a10;border-color:var(--gold);color:#fff3c0}
+.fx small{font-weight:400;opacity:.8}.fx .x2{background:none;border:0;color:inherit;cursor:pointer;padding:0 0 0 4px;opacity:.7}.fx .x2:hover{opacity:1}
+.fxbox{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#0a1052;border:2px dashed #5a6cd8;border-radius:10px;padding:8px 12px}
+.fxdots{display:inline-flex;gap:3px}.fxdots i{font-style:normal;font-size:11px;border-radius:50%;width:18px;height:18px;display:grid;place-items:center;font-weight:700}
+.fxdots i.good{background:#1f8a4a}.fxdots i.bad{background:#a02a2a}.fxdots i.note{background:#8a7a20}
+.cmd .fxrow{margin-bottom:8px}
+.seg.wrap{flex-wrap:wrap}.seg.wrap button{flex:1 1 30%}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips .chip{font-size:12px}
+
+/* Lexique */
+.lexhead{display:grid;gap:10px}
+.lexhead input[type=search]{font-size:18px;padding:12px 14px}
+.lexhead .filters{margin:0}.chip small{opacity:.7}
+.lexfilters{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.lexfilters:empty{display:none}
+.lf{min-width:130px;flex:0 1 180px}.lf select{padding:6px 8px}
+.lexgrid{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:12px;margin:12px 0;align-items:start}
+.lexlist{display:grid;gap:4px;max-height:72vh;overflow:auto;padding-right:4px;align-content:start}
+.lexrow{display:flex;gap:8px;align-items:center;text-align:left;background:#0e165a;border:2px solid #2a3aa0;border-radius:9px;padding:8px 10px;cursor:pointer;color:var(--ink)}
+.lexrow:hover{border-color:#6a7cf0}.lexrow.on{background:#1a2a90;border-color:var(--gold)}
+.lexrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.lexrow .nm small{font-weight:400;color:var(--muted)}
+.lexrow .inf{font-size:12px;color:var(--muted);white-space:nowrap}
+.pad{padding:6px 4px}.small{font-size:12px}
+.lexdetail{position:sticky;top:96px;max-height:78vh;overflow:auto}
+.ldet h3{margin:0;font-size:22px}.ltitle{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.lsub{margin:2px 0 10px}
+.lf-grid{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin:0 0 10px;background:#0a1052;border-radius:8px;padding:10px 12px}
+.lf-grid dt{color:var(--gold);font-weight:700;font-size:13px}.lf-grid dd{margin:0}
+.ldet p{margin:.5em 0}.ldet p.bul{margin:.2em 0 .2em 12px}
+.ldet details{margin:8px 0;background:#0a105266;border-radius:8px;padding:6px 12px}.ldet summary{cursor:pointer;font-weight:700;color:var(--gold)}
+.lexact{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:2px dashed #5a6cd8}.lexact select{width:auto;min-width:140px}
+@media(max-width:900px){.lexgrid{grid-template-columns:1fr}.lexdetail{display:none}.lexlist{max-height:none}}

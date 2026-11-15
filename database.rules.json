@@ -20,6 +20,11 @@
             }
           }
         },
+        "fx": {
+          "$cid": {
+            ".write": "auth != null && root.child('rooms/' + $room + '/meta/gm').val() === auth.uid"
+          }
+        },
         "combat": {
           ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
         },
