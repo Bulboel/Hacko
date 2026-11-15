@@ -34,7 +34,7 @@
     mon: () => [{ k: "t", label: "Type", opts: uniq("mon", "t", v => TYPE_FR[v] || v) }, { k: "cmin", label: "FP min", opts: CRS }, { k: "cmax", label: "FP max", opts: CRS }],
     eq: () => [{ k: "c", label: "Catégorie", opts: uniq("eq", "c") }, { k: "pmax", label: "Prix max", opts: [["", "Tous"], [100, "≤ 1 po"], [1000, "≤ 10 po"], [10000, "≤ 100 po"], [100000, "≤ 1 000 po"]] }],
     mag: () => [{ k: "r", label: "Rareté", opts: [["Commun", "Commun"], ["Peu commun", "Peu commun"], ["Rare", "Rare"], ["Très rare", "Très rare"], ["Légendaire", "Légendaire"], ["Artefact", "Artefact"], ["Variable", "Variable"]] }, { k: "c", label: "Catégorie", opts: uniq("mag", "c") }],
-    perso: () => [{ k: "k", label: "Genre", opts: [["mon", "Monstres"], ["obj", "Objets"], ["lieu", "Villes & lieux"], ["pnj", "PNJ"]] }],
+    perso: () => [{ k: "k", label: "Genre", opts: [["mon", "Monstres"], ["obj", "Objets"], ["lieu", "Villes & lieux"], ["pnj", "PNJ"], ["sort", "Sorts"], ["autre", "Autres"]] }],
     spl: () => [{ k: "lv", label: "Niveau", opts: [[0, "Tour de magie"], ...Array.from({ length: 9 }, (_, i) => [i + 1, "Niveau " + (i + 1)])] }, { k: "sc", label: "École", opts: uniq("spl", "sc") }, { k: "cl", label: "Classe", opts: [...new Set(all.filter(e => e._c === "spl").flatMap(e => e.cl))].sort().map(v => [v, v]) }]
   };
   const SORTS = {

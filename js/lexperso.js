@@ -16,17 +16,25 @@
     lieu: { l: "Ville / lieu", ic: "🏰", fields: [
       { k: "type", l: "Type", ph: "ville, village, auberge, donjon…" }, { k: "region", l: "Région" }, { k: "pop", l: "Population", ph: "ex. 3 000" }, { k: "lead", l: "Dirigeant / pouvoir" },
       { k: "poi", l: "Lieux d'intérêt (un par ligne : Nom : détail)", area: true, bold: true }] },
+    sort: { l: "Sort", ic: "✨", fields: [
+      { k: "lv", l: "Niveau", t: "select", o: [["0", "Sort mineur"], ...Array.from({ length: 9 }, (_, i) => [String(i + 1), "Niveau " + (i + 1)])] },
+      { k: "school", l: "École", t: "select", o: ["Abjuration", "Divination", "Enchantement", "Évocation", "Illusion", "Invocation", "Nécromancie", "Transmutation", "Autre"] },
+      { k: "cast", l: "Temps d'incantation", ph: "ex. 1 action" }, { k: "range", l: "Portée", ph: "ex. 18 mètres" }, { k: "comp", l: "Composantes", ph: "ex. V, S, M (une plume)" },
+      { k: "dur", l: "Durée", ph: "ex. Concentration, 1 minute" }, { k: "cls", l: "Classes", ph: "ex. Magicien, Clerc" }, { k: "eff", l: "Effets et règles", area: true }] },
     pnj: { l: "PNJ", ic: "🧑", fields: [
-      { k: "role", l: "Rôle / métier" }, { k: "race", l: "Race" }, { k: "lieu", l: "Où le trouver" }, { k: "att", l: "Attitude envers le groupe" }, { k: "secret", l: "Secrets, objectifs…", area: true }] }
+      { k: "role", l: "Rôle / métier" }, { k: "race", l: "Race" }, { k: "lieu", l: "Où le trouver" }, { k: "att", l: "Attitude envers le groupe" }, { k: "secret", l: "Secrets, objectifs…", area: true }] },
+    autre: { l: "Autre", ic: "🔖", fields: [
+      { k: "type", l: "Genre", ph: "faction, divinité, légende, règle maison, quête, monnaie…" }, { k: "lien", l: "Lié à", ph: "un lieu, un PNJ, une région…" }, { k: "notes", l: "Détails", area: true }] }
   };
   const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, "'");
   const MAX = 300, MAX_IMG = 40;
 
   function toEntry(id, c) {
     const K = KINDS[c.k] || KINDS.obj, v = c.v || {};
-    const f = K.fields.filter(x => !x.area && v[x.k] !== undefined && v[x.k] !== "" && v[x.k] !== null).map(x => [x.l, v[x.k]]);
+    const lab = (x, val) => { const o = (x.o || []).find(q => Array.isArray(q) && q[0] === String(val)); return o ? o[1] : val; };
+    const f = K.fields.filter(x => !x.area && v[x.k] !== undefined && v[x.k] !== "" && v[x.k] !== null).map(x => [x.l, lab(x, v[x.k])]);
     const sec = K.fields.filter(x => x.area && v[x.k]).map(x => [x.l.replace(/ \(.*\)/, ""), String(v[x.k]).split("\n").filter(Boolean).map(l => { if (!x.bold) return l; const m = l.match(/^(.+?)\s*:\s*(.+)$/); return m ? `▸ ${m[1]}. ${m[2]}` : "▸ " + l; })]);
-    const bits = c.k === "mon" ? [v.size, v.type, v.cr ? "FP " + v.cr : "", v.hp ? v.hp + " PV" : "", v.ac ? "CA " + v.ac : ""] : c.k === "obj" ? [v.cat, v.rar, v.prix] : c.k === "lieu" ? [v.type, v.region] : [v.role, v.race];
+    const bits = c.k === "mon" ? [v.size, v.type, v.cr ? "FP " + v.cr : "", v.hp ? v.hp + " PV" : "", v.ac ? "CA " + v.ac : ""] : c.k === "obj" ? [v.cat, v.rar, v.prix] : c.k === "lieu" ? [v.type, v.region] : c.k === "sort" ? [v.lv !== undefined ? lab(KINDS.sort.fields[0], v.lv) : "", v.school] : c.k === "autre" ? [v.type, v.lien] : [v.role, v.race];
     const e = { _c: "perso", id, kind: c.k, n: c.n, a: "", s: [K.l, ...bits.filter(Boolean)].join(" · "), ic: K.ic, f, d: String(c.d || "").split("\n").filter(Boolean), sec, img: c.img || null, ts: c.ts || 0, raw: c };
     e._ex = norm([c.d, ...Object.values(v)].join(" "));
     if (c.k === "mon") e.x = { hp: +v.hp || 1, ac: +v.ac || 10, b: +v.bonus || 0, k: v.sp || "orc", acts: String(v.acts || "").split("\n").filter(Boolean).slice(0, 6).map(l => { const m = l.match(/^(.+?)\s*:\s*(.+)$/); return m ? { n: m[1], d: m[2].slice(0, 140) } : { n: l.slice(0, 40), d: "" }; }) };
@@ -43,7 +51,7 @@
     const draw = () => {
       const K = KINDS[kind];
       body.replaceChildren(...[
-        h("label", {}, "Nom", h("input", { id: "lp-n", maxlength: 60, value: edit ? c.n : "", required: true, placeholder: edit ? "" : "ex. " + ({ mon: "Ogre des marais", obj: "Épée de la Lune", lieu: "Brumeval", pnj: "Maître Orlo" })[kind] })),
+        h("label", {}, "Nom", h("input", { id: "lp-n", maxlength: 60, value: edit ? c.n : "", required: true, placeholder: edit ? "" : "ex. " + ({ mon: "Ogre des marais", obj: "Épée de la Lune", lieu: "Brumeval", pnj: "Maître Orlo", sort: "Éclair de lune", autre: "Ordre de l'Aube" })[kind] })),
         ...K.fields.map(f => {
           const val = vals[f.k] ?? "";
           const set = ev => vals[f.k] = f.t === "number" ? (ev.target.value === "" ? "" : +ev.target.value) : ev.target.value;
@@ -91,6 +99,17 @@
     if (e.kind === "mon" && isGM()) {
       const n = h("input", { type: "number", value: 1, min: 1, max: 12, style: "width:4.5em" });
       box.append(h("label", { class: "inl" }, "Quantité", n), h("button", { class: "btn gold", onclick: () => { const k = Math.max(1, Math.min(12, +n.value || 1)); for (let i = 0; i < k; i++) addEnemy({ kind: e.x.k, name: e.n, hp: e.x.hp, ac: e.x.ac, bonus: e.x.b, acts: e.x.acts }, i); toast(`👹 ${k} × ${e.n} ajouté${k > 1 ? "s" : ""} au combat`, "good"); } }, "⚔ Ajouter au combat"));
+    }
+    if (e.kind === "sort") {
+      const mine = chars().filter(c => !c.enemy && (isGM() || c.owner === uid()));
+      if (mine.length) {
+        const who = h("select", {}, mine.map(c => h("option", { value: c.id }, c.name)));
+        box.append(h("label", { class: "inl" }, "Pour", who), h("button", { class: "btn gold", onclick: () => {
+          const c = S.chars[who.value]; if (!c) return;
+          if (Object.values(c.spl || {}).some(x => norm(x.n) === norm(e.n))) return toast(`${c.name} connaît déjà ${e.n}.`);
+          write({ [`chars/${who.value}/spl/${sync.newId()}`]: { n: e.n, lv: +(raw.v || {}).lv || 0, i: null, p: true } });
+          toast(`✨ ${e.n} ajouté aux sorts de ${c.name}`, "good"); } }, "✨ Ajouter à ses sorts"));
+      }
     }
     if (e.kind === "obj") {
       const mine = chars().filter(c => !c.enemy && (isGM() || c.owner === uid()));
