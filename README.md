@@ -30,7 +30,7 @@ Sans configuration, la synchro marche entre **les onglets du même navigateur** 
 3. Le MJ ajoute les ennemis, choisit le décor, clique **Lancer le combat**. À son tour, un joueur a un menu : *Attaquer / Actions / Objets / Fin de tour*.
 
 ## Modèle de confiance (règles de la base)
-- Max. 10 membres par salle (vérifié côté serveur).
+- Max. 10 membres par salle : limite appliquée par l'application (Firebase ne sait pas compter les membres dans ses règles).
 - Un personnage n'est modifiable que par son joueur et le MJ — **sauf les PV**, que tout membre peut changer (pour que les joueurs puissent infliger des dégâts aux ennemis, comme à une vraie table).
 - Une note n'est supprimable que par son auteur ou le MJ.
 - Les codes de salle sont courts : n'importe qui connaissant le code peut *lire* la salle. Ne mets rien de sensible dedans.

@@ -9,7 +9,7 @@
         },
         "members": {
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid && (data.exists() || root.child('rooms/' + $room + '/members').numChildren() < 10)"
+            ".write": "auth != null && auth.uid === $uid"
           }
         },
         "chars": {
