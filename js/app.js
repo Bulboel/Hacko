@@ -181,6 +181,7 @@ function onState(s) {
   S = s || {}; H.state = S;
   if (!code) return;
   if (H.Board) H.Board.onState();
+  if (H.Dice) H.Dice.onState();
   if (had) for (const [cid, list] of Object.entries(S.fx || {})) {
     const c = (S.chars || {})[cid];
     if (c && c.owner === uid() && !c.enemy && !isGM()) for (const [fid, e] of Object.entries(list)) if (!(prevFx[cid] || {})[fid]) toast(`⚑ MJ → ${c.name} : ${fxLabel(e)}`, FXK[e.k] && FXK[e.k][2] === "bad" ? "err" : "good");
@@ -559,20 +560,21 @@ function exportGame() {
   const a = h("a", { href: URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], { type: "application/json" })), download: `hacko-${code}.json` });
   document.body.append(a); a.click(); a.remove();
 }
-function roll(sides) {
-  const n = Math.max(1, Math.min(10, +$("#dice-n").value || 1)), m = +$("#dice-mod").value || 0;
-  const rs = Array.from({ length: n }, () => d(sides)), tot = rs.reduce((a, b) => a + b, 0) + m;
-  const nat = sides === 20 && n === 1 ? (rs[0] === 20 ? " — RÉUSSITE CRITIQUE !" : rs[0] === 1 ? " — ÉCHEC CRITIQUE…" : "") : "";
-  log(`🎲 ${myName} lance ${n}d${sides}${m ? sign(m) : ""} → [${rs.join(", ")}]${m ? " " + sign(m) : ""} = ${tot}${nat}`);
-  toast(`🎲 ${n}d${sides}${m ? sign(m) : ""} = ${tot}${nat}`, nat.includes("CRIT") && rs[0] === 20 ? "good" : nat ? "err" : "");
-}
-
 /* ---------- Initialisation ---------- */
 function init() {
   sync = H.createSync();
   initLanding();
   $("#tabs").onclick = e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); };
   $("#leave").onclick = leave;
+  $("#help").onclick = () => openModal(h("div", {}, h("h3", {}, "❓ Comment ça marche ?"),
+    h("p", {}, h("b", {}, "Les dés restent sur la table. "), "L'outil est le carnet de bord partagé : on lance ses vrais dés, et on note le résultat, les PV, les sorts utilisés."),
+    h("ul", { class: "help" },
+      h("li", {}, h("b", {}, "🧙 Personnages : "), "ta fiche (PV, sorts, objets, capacités). Quand tu lances un sort, clique sur « Lancer » : l'emplacement est dépensé tout seul."),
+      h("li", {}, h("b", {}, "⚔ Combat : "), "l'ordre des tours, les PV de chacun, les effets posés par le MJ (avantage, malus…)."),
+      h("li", {}, h("b", {}, "🎲 Journal : "), "pour noter un jet réel (« J'ai lancé mes dés »), ou lancer des dés virtuels en cas de besoin. Tout le monde voit tout."),
+      h("li", {}, h("b", {}, "📌 Panneau : "), "des post-it à déplacer : indices, noms, croquis, photos."),
+      h("li", {}, h("b", {}, "📜 Notes et 📚 Lexique : "), "les notes de la partie, et la recherche instantanée de monstres, objets, sorts.")),
+    h("button", { class: "btn gold", onclick: closeModal }, "Compris !")), "sm");
   $("#room-code").onclick = () => {
     const url = location.origin + location.pathname;
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast("Lien d'invitation copié 📋"), () => prompt("Lien d'invitation :", url));
@@ -584,7 +586,7 @@ function init() {
     write({ ["notes/" + sync.newId()]: { a: uid(), an: myName, c: me().color || "#fff", t, tag: $("#note-tag").value, ts: Date.now() } });
     $("#note-text").value = "";
   };
-  $("#dice").append(...[4, 6, 8, 10, 12, 20, 100].map(s => h("button", { class: "die d" + s, onclick: () => roll(s) }, "d" + s)));
+  if (H.Dice) H.Dice.init();
   window.addEventListener("beforeunload", () => { if (code && sync.mode === "local") write({ ["members/" + uid() + "/online"]: false }); });
 }
 document.addEventListener("DOMContentLoaded", init);

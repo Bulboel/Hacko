@@ -234,12 +234,13 @@
       const st = c.st || {};
       return [h("div", { class: "stats6" }, AB.map(([k, ab, nm]) => h("div", { class: "abbox" }, h("div", { class: "muted small" }, nm),
         h("div", { class: "abmod" }, sg(mod(st[k]))), h("input", { type: "number", value: st[k] ?? "", disabled: !ed, onchange: e => write({ [`chars/${id}/st/${k}`]: +e.target.value || 10 }) }),
-        h("label", { class: "inl small" }, h("input", { type: "checkbox", checked: !!(c.sv || {})[k], disabled: !ed, onchange: e => write({ [`chars/${id}/sv/${k}`]: e.target.checked ? 1 : null }) }), ` Sauv. ${sg(bonusSave(c, k))}`)))),
+        h("label", { class: "inl small" }, h("input", { type: "checkbox", checked: !!(c.sv || {})[k], disabled: !ed, onchange: e => write({ [`chars/${id}/sv/${k}`]: e.target.checked ? 1 : null }) }), ` Sauv. ${sg(bonusSave(c, k))}`),
+        h("button", { class: "btn sm ghost", title: "Jet de sauvegarde", onclick: () => H.Dice.roll(1, bonusSave(c, k), `${c.name} — sauvegarde ${ab}`) }, "🎲")))),
       h("div", { class: "stats" }, h("label", { class: "fld" }, "Bonus de maîtrise", h("input", { type: "text", disabled: true, value: sg(pbOf(c.lvl)) })), h("label", { class: "fld" }, "Perception passive", h("input", { type: "text", disabled: true, value: 10 + bonusSkill(c, SK.find(s => s[0] === "perception")) })),
         h("label", { class: "fld" }, "Vitesse", h("input", { value: c.spd || "", disabled: !ed, onchange: e => set("spd", e.target.value) }))),
       h("h4", {}, "Compétences"),
       h("div", { class: "skills" }, SK.map(sk => h("label", { class: "skrow" }, h("input", { type: "checkbox", checked: !!(c.skp || {})[sk[0]], disabled: !ed, onchange: e => write({ [`chars/${id}/skp/${sk[0]}`]: e.target.checked ? 1 : null, [`chars/${id}/skb/${sk[0]}`]: null }) }),
-        h("span", { class: "grow" }, `${sk[1]} `, h("small", { class: "muted" }, `(${AB.find(a => a[0] === sk[2])[1]})`)), h("b", {}, sg(bonusSkill(c, sk))))))];
+        h("span", { class: "grow" }, `${sk[1]} `, h("small", { class: "muted" }, `(${AB.find(a => a[0] === sk[2])[1]})`)), h("b", {}, sg(bonusSkill(c, sk))), h("button", { class: "btn sm ghost", title: "Lancer d20 " + sg(bonusSkill(c, sk)), onclick: e => { e.preventDefault(); H.Dice.roll(1, bonusSkill(c, sk), `${c.name} — ${sk[1]}`); } }, "🎲"))))];
     }
     if (name === "sor") return sortsTab(x);
     if (name === "cap") {

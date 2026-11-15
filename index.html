@@ -36,7 +36,7 @@
       </div>
     </div>
     <div id="members" class="members"></div>
-    <div class="t-right"><span id="role" class="badge"></span><button id="leave" class="btn ghost sm">Quitter</button></div>
+    <div class="t-right"><button id="help" class="btn ghost sm" title="Comment ça marche ?">❓ Aide</button><span id="role" class="badge"></span><button id="leave" class="btn ghost sm">Quitter</button></div>
   </header>
   <nav id="tabs" role="tablist">
     <button data-tab="combat" class="on">⚔ Combat</button>
@@ -91,13 +91,7 @@
     </section>
 
     <section id="tab-log" class="tab" hidden>
-      <div class="ffwin diceform">
-        <div class="dice" id="dice"></div>
-        <div class="row">
-          <label class="inl">Bonus <input id="dice-mod" type="number" value="0" style="width:4.5em"></label>
-          <label class="inl">Nb <input id="dice-n" type="number" value="1" min="1" max="10" style="width:4em"></label>
-        </div>
-      </div>
+      <div id="dice-panel" class="ffwin diceform"></div>
       <div id="log-bar" class="gmbar"></div>
       <div id="log-feed" class="feed log"></div>
     </section>
@@ -115,5 +109,6 @@
 <script src="js/lexique.js"></script>
 <script src="js/persos.js"></script>
 <script src="js/board.js"></script>
+<script src="js/dice.js"></script>
 </body>
 </html>
