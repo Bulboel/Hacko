@@ -128,5 +128,5 @@
     }
     seenCount = n;
   }
-  H.Board = { render, onState, reset() { els.clear(); const b = $("#board"); b && b.querySelectorAll(".pn").forEach(e => e.remove()); seenCount = null; } };
+  H.Board = { shrink, lightbox, render, onState, reset() { els.clear(); const b = $("#board"); b && b.querySelectorAll(".pn").forEach(e => e.remove()); seenCount = null; } };
 })();

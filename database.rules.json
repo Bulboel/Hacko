@@ -33,6 +33,9 @@
             ".write": "auth != null && (root.child('rooms/' + $room + '/meta/gm').val() === auth.uid || data.child('a').val() === auth.uid || (!data.exists() && newData.child('a').val() === auth.uid))"
           }
         },
+        "lex": {
+          ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
+        },
         "roll": {
           ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
         },

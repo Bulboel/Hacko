@@ -249,3 +249,8 @@ input[type=checkbox],input[type=radio]{width:auto;flex:none;margin:0}
 #dicecv[hidden]{display:none}
 .diceform .row input{flex:1;min-width:9em}
 ul.help{padding-left:18px;display:grid;gap:8px;margin:8px 0}
+
+/* Lexique : Notre monde */
+.lexpic{max-width:100%;max-height:240px;display:block;margin:0 0 10px;border-radius:10px;border:3px solid #fff3;cursor:zoom-in}
+.lexform{display:grid;gap:10px}.lexform select{margin-top:4px}
+.lexhead .row input[type=search]{flex:1}

@@ -216,6 +216,7 @@ function render() {
   if (tab === "notes") renderNotes();
   if (tab === "log") renderLog();
   if (tab === "board") H.Board.render();
+  if (tab === "lex" && H.Lex && H.Lex.refresh) H.Lex.refresh();
   if (sheetId) renderSheet();
   const seen = +(localStorage.getItem("hacko.seen." + code) || 0), n = Object.keys(S.notes || {}).length;
   $("#nb-notes").textContent = tab !== "notes" && n > seen ? n - seen : "";

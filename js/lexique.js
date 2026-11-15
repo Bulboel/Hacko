@@ -3,7 +3,7 @@
    Données générées par tools/build-lexique.py dans data/lexique-*.js (chargées à la première ouverture). */
 (function () {
   const FILES = ["mon", "eq", "mag", "spl", "cls", "rac", "reg"];
-  const CATS = [["all", "Tout", "📚"], ["mon", "Monstres", "👹"], ["eq", "Objets", "🎒"], ["mag", "Objets magiques", "💎"], ["spl", "Sorts", "✨"], ["cls", "Classes", "🛡️"], ["rac", "Races", "🧝"], ["reg", "Règles & états", "📖"]];
+  const CATS = [["all", "Tout", "📚"], ["perso", "Notre monde", "⭐"], ["mon", "Monstres", "👹"], ["eq", "Objets", "🎒"], ["mag", "Objets magiques", "💎"], ["spl", "Sorts", "✨"], ["cls", "Classes", "🛡️"], ["rac", "Races", "🧝"], ["reg", "Règles & états", "📖"]];
   const ICON = Object.fromEntries(CATS.map(c => [c[0], c[2]]));
   const TYPE_FR = { beast: "Bête", humanoid: "Humanoïde", dragon: "Dragon", monstrosity: "Monstruosité", fiend: "Fiélon", undead: "Mort-vivant", elemental: "Élémentaire", giant: "Géant", swarm: "Nuée", construct: "Créature artificielle", plant: "Plante", fey: "Fée", celestial: "Céleste", aberration: "Aberration", ooze: "Vase" };
   const CRS = [["", "—"], [0, "0"], [0.125, "1/8"], [0.25, "1/4"], [0.5, "1/2"], ...Array.from({ length: 30 }, (_, i) => [i + 1, String(i + 1)])];
@@ -24,7 +24,7 @@
         e._h = norm([e.n, e.a, e.s, e.c, e.sc, (e.cl || []).join(" ")].join(" "));
         all.push(e);
       }
-      loaded = true;
+      loaded = true; syncCustom(true);
     });
     return loading;
   }
@@ -34,9 +34,11 @@
     mon: () => [{ k: "t", label: "Type", opts: uniq("mon", "t", v => TYPE_FR[v] || v) }, { k: "cmin", label: "FP min", opts: CRS }, { k: "cmax", label: "FP max", opts: CRS }],
     eq: () => [{ k: "c", label: "Catégorie", opts: uniq("eq", "c") }, { k: "pmax", label: "Prix max", opts: [["", "Tous"], [100, "≤ 1 po"], [1000, "≤ 10 po"], [10000, "≤ 100 po"], [100000, "≤ 1 000 po"]] }],
     mag: () => [{ k: "r", label: "Rareté", opts: [["Commun", "Commun"], ["Peu commun", "Peu commun"], ["Rare", "Rare"], ["Très rare", "Très rare"], ["Légendaire", "Légendaire"], ["Artefact", "Artefact"], ["Variable", "Variable"]] }, { k: "c", label: "Catégorie", opts: uniq("mag", "c") }],
+    perso: () => [{ k: "k", label: "Genre", opts: [["mon", "Monstres"], ["obj", "Objets"], ["lieu", "Villes & lieux"], ["pnj", "PNJ"]] }],
     spl: () => [{ k: "lv", label: "Niveau", opts: [[0, "Tour de magie"], ...Array.from({ length: 9 }, (_, i) => [i + 1, "Niveau " + (i + 1)])] }, { k: "sc", label: "École", opts: uniq("spl", "sc") }, { k: "cl", label: "Classe", opts: [...new Set(all.filter(e => e._c === "spl").flatMap(e => e.cl))].sort().map(v => [v, v]) }]
   };
   const SORTS = {
+    perso: [["rel", "Pertinence"], ["n", "Nom"], ["ts", "Plus récents"]],
     mon: [["rel", "Pertinence"], ["n", "Nom"], ["cr", "FP croissant"], ["crd", "FP décroissant"], ["hp", "PV décroissants"]],
     eq: [["rel", "Pertinence"], ["n", "Nom"], ["p", "Prix croissant"], ["pd", "Prix décroissant"], ["w", "Poids"]],
     mag: [["rel", "Pertinence"], ["n", "Nom"], ["ro", "Rareté ↑"], ["rod", "Rareté ↓"]],
@@ -48,14 +50,24 @@
     if (cat === "mon") return (!has(F.t) || e.t === F.t) && (!has(F.cmin) || e.cr >= +F.cmin) && (!has(F.cmax) || e.cr <= +F.cmax);
     if (cat === "eq") return (!has(F.c) || e.c === F.c) && (!has(F.pmax) || e.p <= +F.pmax);
     if (cat === "mag") return (!has(F.r) || e.r === F.r) && (!has(F.c) || e.c === F.c);
+    if (cat === "perso") return !has(F.k) || e.kind === F.k;
     if (cat === "spl") return (!has(F.lv) || e.lv === +F.lv) && (!has(F.sc) || e.sc === F.sc) && (!has(F.cl) || e.cl.includes(F.cl));
     return true;
   }
   const SORTFN = {
+    ts: (a, b) => b.ts - a.ts,
     n: (a, b) => a._n.localeCompare(b._n, "fr"), cr: (a, b) => a.cr - b.cr, crd: (a, b) => b.cr - a.cr, hp: (a, b) => b.hp - a.hp,
     p: (a, b) => a.p - b.p, pd: (a, b) => b.p - a.p, w: (a, b) => a.w - b.w, ro: (a, b) => a.ro - b.ro, rod: (a, b) => b.ro - a.ro, lv: (a, b) => a.lv - b.lv, lvd: (a, b) => b.lv - a.lv
   };
 
+  let customSig = "";
+  function syncCustom(force) {
+    const sig = Object.entries(S.lex || {}).map(([k, v]) => k + (v.ut || v.ts)).join(",");
+    if (!force && sig === customSig) return false;
+    customSig = sig; all = all.filter(e => e._c !== "perso");
+    for (const e of H.LexPerso.entries()) { e._n = norm(e.n); e._a = ""; e._h = norm([e.n, e.s].join(" ")) + " " + e._ex; all.push(e); }
+    return true;
+  }
   function search() {
     const toks = norm(q).split(/\s+/).filter(Boolean);
     const list = all.filter(e => (cat === "all" || e._c === cat) && pass(e) && toks.every(t => e._h.includes(t)));
@@ -74,6 +86,7 @@
     if (e._c === "eq") return e.f[0][1];
     if (e._c === "mag") return e.r;
     if (e._c === "spl") return e.lv ? "Niv. " + e.lv : "Tour";
+    if (e._c === "perso") return e.raw.an ? "par " + e.raw.an : "";
     return "";
   }
   function renderCats() {
@@ -94,7 +107,7 @@
     box.replaceChildren(...[
       h("div", { class: "muted pad small" }, `${results.length} résultat${results.length > 1 ? "s" : ""}`),
       results.slice(0, shown).map((e, i) => h("button", { class: "lexrow" + (i === sel ? " on" : ""), "data-i": i, onclick: () => choose(i, true) },
-        h("span", { class: "ic" }, ICON[e._c]), h("span", { class: "nm" }, e.n, e.a && norm(e.a) !== norm(e.n) && e._c !== "eq" ? h("small", {}, " " + e.a) : null), h("span", { class: "inf" }, rowInfo(e)))),
+        h("span", { class: "ic" }, e.ic || ICON[e._c]), h("span", { class: "nm" }, e.n, e.a && norm(e.a) !== norm(e.n) && e._c !== "eq" ? h("small", {}, " " + e.a) : null), h("span", { class: "inf" }, rowInfo(e)))),
       results.length > shown ? h("button", { class: "btn sm", onclick: () => { shown += 100; renderList(); } }, `Afficher plus (${results.length - shown})`) : null].flat(Infinity).filter(Boolean));
   }
   function renderDetail() {
@@ -120,8 +133,9 @@
   }
   function detail(e) {
     return h("div", { class: "ldet" },
-      h("div", { class: "ltitle" }, h("h3", {}, ICON[e._c] + " " + e.n), e.a && norm(e.a) !== norm(e.n) && e._c !== "eq" ? h("span", { class: "muted" }, e.a) : null),
+      h("div", { class: "ltitle" }, h("h3", {}, (e.ic || ICON[e._c]) + " " + e.n), e.a && norm(e.a) !== norm(e.n) && e._c !== "eq" ? h("span", { class: "muted" }, e.a) : null),
       h("div", { class: "muted lsub" }, e.s),
+      e.img ? h("img", { class: "lexpic", src: e.img, alt: "", onclick: () => H.Board.lightbox(e.img, e.n) }) : null,
       e.f && e.f.length ? h("dl", { class: "lf-grid" }, e.f.map(([k, v]) => [h("dt", {}, k), h("dd", {}, String(v))])) : null,
       e.d0 ? h("p", { class: "muted" }, h("i", {}, e.d0)) : null,
       (e.d || []).filter(Boolean).map(para),
@@ -132,6 +146,7 @@
   }
 
   function actions(e) {
+    if (e._c === "perso") return H.LexPerso.actions(e);
     if (!["mon", "eq", "mag", "spl"].includes(e._c) || !H.state || !H.state.meta) return null;
     const box = h("div", { class: "lexact" });
     if (e._c === "mon") {
@@ -173,8 +188,10 @@
       box.replaceChildren(h("p", { class: "muted pad" }, "Chargement du lexique…"));
       try { await loadData(); } catch (err) { box.replaceChildren(h("p", { class: "err" }, err.message)); return; }
     }
+    syncCustom();
     if (!ready) {
       ready = true;
+      $("#lex-add").onclick = () => H.LexPerso.editor(null, cat === "perso" && F.k ? F.k : "mon");
       const input = $("#lex-q");
       input.addEventListener("input", () => { q = input.value; update(); });
       input.addEventListener("keydown", ev => {
@@ -188,5 +205,17 @@
     }
     if (!mobile()) $("#lex-q").focus();
   }
-  H.Lex = { open, ensure: loadData, show: e => openModal(detail(e), "wide") };
+  /* appelé quand les données de la table changent : recharge « Notre monde » en gardant la sélection */
+  function refreshCustom() {
+    if (!ready || !syncCustom()) return;
+    const keep = results[sel] && results[sel].id; search();
+    if (keep) { const i = results.findIndex(e => e.id === keep); if (i >= 0) sel = i; }
+    renderList(); if (!mobile()) renderDetail(); renderCats();
+  }
+  function focus(id) {
+    if (!loaded) return; syncCustom(true); cat = "perso"; F = {}; sortBy = "ts"; q = ""; $("#lex-q").value = "";
+    refresh0(id);
+  }
+  function refresh0(id) { renderCats(); renderFilters(); search(); const i = results.findIndex(e => e.id === id); if (i >= 0) sel = i; renderList(); if (!mobile()) renderDetail(); }
+  H.Lex = { open, refresh: refreshCustom, focus, ensure: loadData, show: e => openModal(detail(e), "wide") };
 })();
