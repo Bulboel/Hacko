@@ -1,5 +1,106 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hackénia 0.0.0.7</title><link rel="stylesheet" href="style.css"></head><body>
-<section id="create" class="wrap"><div class="card"><div class="brand">HACKÉNIA</div><h1>Crée ton aventurier</h1><p>Prototype 0.0.0.7 — exploration, curiosité récompensée, interactions et jets.</p><div class="grid"><label>Nom<input id="name" value="Aldren"></label><label>Race<select id="race"><option>Humain</option><option>Elfe</option><option>Nain</option><option>Gnome</option><option>Demi-orc</option><option>Tieffelin</option></select></label><label>Classe<select id="klass"><option>Guerrier</option><option>Magicien</option><option>Barde</option><option>Clerc</option><option>Rôdeur</option><option>Roublard</option><option>Paladin</option></select></label></div><div id="stats" class="stats"></div><button id="start" class="primary">Commencer</button><p id="err"></p></div></section>
-<section id="game" class="wrap" hidden><header><div><div class="brand mini">HACKÉNIA • 0.0.0.7</div><h2 id="place"></h2></div><div><button id="debugBtn">Debug : OFF</button> <button onclick="location.reload()">Nouvelle partie</button></div></header><main><aside><h3 id="who"></h3><div id="sheet"></div><hr><h4>Journal</h4><div id="journal"></div><hr><h4>Relations</h4><div id="relations"></div><hr><h4>Inventaire</h4><div id="inventory">—</div></aside><article><div id="sceneArt" class="sceneArt"></div><div id="reward" hidden>✨ IDÉE PERTINENTE — illustration découverte</div><div id="debug" hidden></div><div id="log"></div><div class="composer"><textarea id="action" placeholder="Que dis-tu ? Que fais-tu ? Qu'observes-tu ?"></textarea><button id="send" class="primary">Agir</button></div><div class="hint">Entrée = agir • Maj+Entrée = nouvelle ligne • observe, questionne et expérimente.</div></article></main></section>
-<div id="dice"><div class="dicebox"><div id="d20">20</div><h2 id="dtitle"></h2><div id="dcalc"></div><strong id="dresult"></strong></div></div>
-<script src="script.js"></script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1030">
+<title>Hacko — Table de MJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ACCUEIL -->
+<div id="landing">
+  <div class="hero">
+    <div class="logo">HACKO</div>
+    <p class="tag">La table de jeu de rôle partagée : combats, tours, PV, objets et notes — en direct, jusqu'à 10 joueurs.</p>
+  </div>
+  <div id="mode-note" class="note"></div>
+  <div class="cards">
+    <form id="f-create" class="ffwin">
+      <h2>Créer une partie <small>(je suis le MJ)</small></h2>
+      <label>Nom de la partie<input id="c-game" maxlength="40" placeholder="Les Ombres de Dassom" required></label>
+      <label>Ton nom<input id="c-name" maxlength="20" placeholder="MJ" required></label>
+      <button class="btn gold">Ouvrir la salle</button>
+    </form>
+    <form id="f-join" class="ffwin">
+      <h2>Rejoindre une partie</h2>
+      <label>Code de la salle<input id="j-code" maxlength="8" placeholder="K7QMR" required style="text-transform:uppercase"></label>
+      <label>Ton nom<input id="j-name" maxlength="20" placeholder="Aldren" required></label>
+      <button class="btn">Entrer</button>
+    </form>
+  </div>
+  <div id="resume" class="resume" hidden></div>
+  <p id="land-err" class="err"></p>
+</div>
+
+<!-- APPLICATION -->
+<div id="app" hidden>
+  <header id="top">
+    <div class="t-left">
+      <div class="logo sm">HACKO</div>
+      <div class="room"><strong id="room-name"></strong>
+        <button id="room-code" class="chip" title="Copier le lien d'invitation"></button>
+      </div>
+    </div>
+    <div id="members" class="members"></div>
+    <div class="t-right"><span id="role" class="badge"></span><button id="leave" class="btn ghost sm">Quitter</button></div>
+  </header>
+  <nav id="tabs" role="tablist">
+    <button data-tab="combat" class="on">⚔ Combat</button>
+    <button data-tab="chars">🧙 Personnages</button>
+    <button data-tab="notes">📜 Notes <i id="nb-notes"></i></button>
+    <button data-tab="log">🎲 Journal</button>
+  </nav>
+
+  <main>
+    <section id="tab-combat" class="tab">
+      <div id="order" class="order"></div>
+      <div id="gmbar" class="gmbar"></div>
+      <div id="stage" class="stage"><canvas id="cv"></canvas></div>
+      <div id="menu"></div>
+      <div id="hud" class="hud"></div>
+    </section>
+
+    <section id="tab-chars" class="tab" hidden>
+      <div id="char-bar" class="gmbar"></div>
+      <div id="char-grid" class="cgrid"></div>
+    </section>
+
+    <section id="tab-notes" class="tab" hidden>
+      <form id="note-form" class="ffwin noteform">
+        <div class="row"><select id="note-tag"></select>
+          <input id="note-search" type="search" placeholder="Rechercher dans les notes…"></div>
+        <textarea id="note-text" rows="3" maxlength="1500" placeholder="Ce qui se passe en jeu : un lieu, un PNJ, un indice… Tout le monde le verra."></textarea>
+        <div class="row end"><button class="btn gold">Publier la note</button></div>
+      </form>
+      <div id="note-filters" class="filters"></div>
+      <div id="note-feed" class="feed"></div>
+    </section>
+
+    <section id="tab-log" class="tab" hidden>
+      <div class="ffwin diceform">
+        <div class="dice" id="dice"></div>
+        <div class="row">
+          <label class="inl">Bonus <input id="dice-mod" type="number" value="0" style="width:4.5em"></label>
+          <label class="inl">Nb <input id="dice-n" type="number" value="1" min="1" max="10" style="width:4em"></label>
+        </div>
+      </div>
+      <div id="log-bar" class="gmbar"></div>
+      <div id="log-feed" class="feed log"></div>
+    </section>
+  </main>
+</div>
+
+<div id="modal" hidden></div>
+<div id="toasts"></div>
+
+<script src="firebase-config.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

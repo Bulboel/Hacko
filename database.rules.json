@@ -1,0 +1,37 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        ".read": "auth != null",
+        "meta": {
+          ".write": "auth != null && (!data.exists() || data.child('gm').val() === auth.uid)",
+          ".validate": "newData.child('gm').val() === (data.exists() ? data.child('gm').val() : auth.uid)"
+        },
+        "members": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && (data.exists() || root.child('rooms/' + $room + '/members').numChildren() < 10)"
+          }
+        },
+        "chars": {
+          "$cid": {
+            ".write": "auth != null && (root.child('rooms/' + $room + '/meta/gm').val() === auth.uid || data.child('owner').val() === auth.uid || (!data.exists() && newData.child('owner').val() === auth.uid))",
+            "hp": {
+              ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
+            }
+          }
+        },
+        "combat": {
+          ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
+        },
+        "notes": {
+          "$nid": {
+            ".write": "auth != null && (root.child('rooms/' + $room + '/meta/gm').val() === auth.uid || data.child('a').val() === auth.uid || (!data.exists() && newData.child('a').val() === auth.uid))"
+          }
+        },
+        "log": {
+          ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
+        }
+      }
+    }
+  }
+}
