@@ -8,6 +8,7 @@ Un outil pour mener tes parties de jeu de rôle **en direct, à 10 personnes max
 - 💥 **Dégâts / soins** en un clic (sur le terrain, la liste d'ordre ou la fiche). Les joueurs ne voient pas les PV exacts des ennemis (seulement « Blessé », « Critique »…).
 - ⚑ **Effets du MJ** : le MJ pose sur n'importe quel personnage un *avantage*, un *désavantage*, un *bonus*, un *malus* ou une *note* (« aux tests de Perception », « −1d4 aux jets »…), avec une durée en rounds si besoin. L'effet s'affiche sur la fiche, dans le menu de tour, sur le terrain et dans la liste du groupe, et le joueur est prévenu.
 - 📚 **Lexique** : recherche instantanée (quelques lettres suffisent, accents ignorés, noms français ou anglais) dans le SRD 5.1 : 334 monstres, 237 objets avec prix, 362 objets magiques, 319 sorts, classes, races, règles et états. Filtres (type, FP, catégorie, prix, rareté, niveau, école, classe), tri, flèches ↑↓ pour parcourir. Depuis une fiche : *ajouter au combat* (×N, avec PV, CA, initiative et attaques), *ajouter à l'inventaire*, *ajouter aux actions*.
+- 📌 **Panneau d'affichage** : un panneau en liège où tout le monde épingle des post-it (texte, couleur, photo ou dessin), les déplace en glissant et les voit bouger en direct. Clic sur une image pour l'agrandir. Chacun modifie ou retire les siens ; le MJ peut tout retirer.
 - 📜 **Notes partagées** : n'importe qui publie (lieu, PNJ, quête, objet, indice), tout le monde lit, recherche et filtre.
 - 🎲 **Dés & journal automatique** : d4 → d100 avec bonus, tout est consigné dans le journal commun. Export JSON de la partie pour le MJ.
 
@@ -38,6 +39,7 @@ Il y a **deux tables fixes** : *La compagnie du rêve* et *Le trio infernal* (le
 ## Modèle de confiance (règles de la base)
 - Max. 10 membres par salle : limite appliquée par l'application (Firebase ne sait pas compter les membres dans ses règles).
 - Un personnage n'est modifiable que par son joueur et le MJ (un personnage « à réclamer » peut être pris par n'importe quel membre de la table) — **sauf les PV**, que tout membre peut changer (pour que les joueurs puissent infliger des dégâts aux ennemis, comme à une vraie table).
+- Sur le panneau, tout le monde peut déplacer n'importe quel post-it ; seul son auteur (ou le MJ) peut le modifier ou le retirer. Les images sont réduites (≈ 640 px) et stockées dans la base : 40 images maximum.
 - Les effets du MJ (`fx`) ne sont modifiables que par le MJ.
 - Une note n'est supprimable que par son auteur ou le MJ.
 - Les deux tables ont des adresses fixes : quiconque connaît l'adresse du site peut entrer comme joueur. C'est pensé pour un groupe d'amis ; ne mets rien de sensible dedans.
@@ -55,6 +57,7 @@ js/sync.js          couche temps réel (Firebase ou local)
 js/sprites.js       sprites pixel art dessinés par code
 js/battle.js        scène de combat 2D (canvas)
 js/app.js           logique et interface
+js/board.js         panneau d'affichage (post-it déplaçables)
 js/lexique.js       onglet Lexique (recherche, filtres, ajout au jeu)
 js/persos.js        création de personnage, fiche à onglets, sorts, réclamation
 data/premades.js    fiches pré-enregistrées des joueurs

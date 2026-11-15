@@ -170,7 +170,7 @@ function initLanding() {
 function leave() {
   if (code && sync) { write({ ["members/" + uid() + "/online"]: false }); sync.leave(); }
   store.del("session");
-  code = null; S = {}; H.state = S; sheetId = null; closeModal(); H.Battle.stop();
+  code = null; S = {}; H.state = S; sheetId = null; closeModal(); H.Battle.stop(); if (H.Board) H.Board.reset();
   $("#app").hidden = true; $("#landing").hidden = false; $("#land-err").textContent = "";
   history.replaceState(null, "", location.pathname); renderTables();
 }
@@ -180,6 +180,7 @@ function onState(s) {
   const prevNotes = Object.keys(S.notes || {}).length, had = !!S.meta, prevFx = S.fx || {};
   S = s || {}; H.state = S;
   if (!code) return;
+  if (H.Board) H.Board.onState();
   if (had) for (const [cid, list] of Object.entries(S.fx || {})) {
     const c = (S.chars || {})[cid];
     if (c && c.owner === uid() && !c.enemy && !isGM()) for (const [fid, e] of Object.entries(list)) if (!(prevFx[cid] || {})[fid]) toast(`⚑ MJ → ${c.name} : ${fxLabel(e)}`, FXK[e.k] && FXK[e.k][2] === "bad" ? "err" : "good");
@@ -213,6 +214,7 @@ function render() {
   if (tab === "chars") renderChars();
   if (tab === "notes") renderNotes();
   if (tab === "log") renderLog();
+  if (tab === "board") H.Board.render();
   if (sheetId) renderSheet();
   const seen = +(localStorage.getItem("hacko.seen." + code) || 0), n = Object.keys(S.notes || {}).length;
   $("#nb-notes").textContent = tab !== "notes" && n > seen ? n - seen : "";

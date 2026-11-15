@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b1030">
 <title>Hacko — Table de MJ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Caveat:wght@500;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -42,6 +42,7 @@
     <button data-tab="combat" class="on">⚔ Combat</button>
     <button data-tab="chars">🧙 Personnages</button>
     <button data-tab="notes">📜 Notes <i id="nb-notes"></i></button>
+    <button data-tab="board">📌 Panneau</button>
     <button data-tab="lex">📚 Lexique</button>
     <button data-tab="log">🎲 Journal</button>
   </nav>
@@ -69,6 +70,11 @@
       </form>
       <div id="note-filters" class="filters"></div>
       <div id="note-feed" class="feed"></div>
+    </section>
+
+    <section id="tab-board" class="tab" hidden>
+      <div id="board-bar" class="gmbar"></div>
+      <div id="board" class="board"><p id="board-empty" class="muted">Le panneau est vide. Épingle le premier post-it : un indice, un nom, un croquis…</p></div>
     </section>
 
     <section id="tab-lex" class="tab" hidden>
@@ -108,5 +114,6 @@
 <script src="js/app.js"></script>
 <script src="js/lexique.js"></script>
 <script src="js/persos.js"></script>
+<script src="js/board.js"></script>
 </body>
 </html>

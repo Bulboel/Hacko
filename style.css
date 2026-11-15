@@ -218,3 +218,20 @@ label.inl{display:inline-flex;align-items:center;gap:6px;text-transform:none;fon
 @media(max-width:720px){.stats6{grid-template-columns:repeat(3,1fr)}.skills{grid-template-columns:1fr}}
 input[type=checkbox],input[type=radio]{width:auto;flex:none;margin:0}
 .li input[type=checkbox]{margin-right:4px}
+
+/* Panneau d'affichage */
+.board{position:relative;height:74vh;min-height:480px;border-radius:12px;overflow:hidden;border:12px solid #6a4420;box-shadow:inset 0 0 40px #0008,0 10px 30px #000a;
+  background:radial-gradient(circle at 20% 30%,#c79a5a 0,transparent 40%),radial-gradient(circle at 80% 70%,#b78848 0,transparent 45%),#bb8f55;
+  background-image:radial-gradient(#0000001f 1px,transparent 1.5px),radial-gradient(circle at 20% 30%,#c79a5a 0,transparent 40%),radial-gradient(circle at 80% 70%,#b78848 0,transparent 45%);background-size:6px 6px,auto,auto;background-color:#bb8f55}
+#board-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:#5a3a14;font-weight:700;margin:0}
+.pn{position:absolute;width:170px;padding:16px 12px 10px;color:#2a2410;font-family:"Caveat","Segoe Print","Comic Sans MS",cursive;font-size:20px;line-height:1.1;box-shadow:2px 6px 10px #0006;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;transition:box-shadow .15s}
+.pn.drag{cursor:grabbing;box-shadow:6px 14px 20px #0008}
+.pn.withimg{width:210px}.pn p{margin:4px 0;white-space:pre-wrap;word-break:break-word}.pn small{display:block;text-align:right;font-size:15px;opacity:.7}
+.pn .pin{position:absolute;top:-6px;left:50%;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8a8a,#b01818);box-shadow:1px 3px 3px #0006}
+.pimg{width:100%;display:block;border:3px solid #fff;box-shadow:0 1px 4px #0005;background:#fff;pointer-events:auto;cursor:zoom-in}
+.pact{position:absolute;top:2px;right:4px;display:flex;gap:2px;opacity:0;transition:opacity .15s}.pn:hover .pact,.pn:focus-within .pact{opacity:1}
+.pact button{background:#0002;border:0;border-radius:4px;width:22px;height:22px;cursor:pointer;color:#2a2410;font-size:12px;padding:0}
+@media(hover:none){.pact{opacity:.8}}
+.swatches{display:flex;gap:8px}.swatches button{width:34px;height:34px;border-radius:6px;border:3px solid transparent;cursor:pointer;box-shadow:0 2px 4px #0006}.swatches button.on{border-color:#fff;transform:scale(1.12)}
+.imgprev{display:grid;gap:6px;justify-items:start}.imgprev img{max-width:100%;max-height:160px;border-radius:6px;border:2px solid #fff}
+.lbimg{max-width:100%;max-height:70vh;display:block;margin:0 auto;border-radius:8px}
