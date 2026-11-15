@@ -10,7 +10,7 @@ Un outil pour mener tes parties de jeu de rôle **en direct, à 10 personnes max
 - 📚 **Lexique** : recherche instantanée (quelques lettres suffisent, accents ignorés, noms français ou anglais) dans le SRD 5.1 : 334 monstres, 237 objets avec prix, 362 objets magiques, 319 sorts, classes, races, règles et états. Filtres (type, FP, catégorie, prix, rareté, niveau, école, classe), tri, flèches ↑↓ pour parcourir. Depuis une fiche : *ajouter au combat* (×N, avec PV, CA, initiative et attaques), *ajouter à l'inventaire*, *ajouter aux actions*.
 - 📌 **Panneau d'affichage** : un panneau en liège où tout le monde épingle des post-it (texte, couleur, photo ou dessin), les déplace en glissant et les voit bouger en direct. Clic sur une image pour l'agrandir. Chacun modifie ou retire les siens ; le MJ peut tout retirer.
 - 📜 **Notes partagées** : n'importe qui publie (lieu, PNJ, quête, objet, indice), tout le monde lit, recherche et filtre.
-- 🎲 **Dés & journal automatique** : d4 → d100 avec bonus, tout est consigné dans le journal commun. Export JSON de la partie pour le MJ.
+- 🎲 **Dés** : plateau où l'on choisit **le nombre et le type de dés** (2d6 + 1d8 + bonus…), avantage / désavantage, animation de dés qui roulent **visible par toute la table**. Onglet « J'ai lancé mes dés » pour noter un jet réel. Des 🎲 sur la fiche lancent une compétence ou une sauvegarde. Tout est consigné dans le journal commun ; export JSON de la partie pour le MJ.
 
 ## Lancer
 
@@ -57,6 +57,7 @@ js/sync.js          couche temps réel (Firebase ou local)
 js/sprites.js       sprites pixel art dessinés par code
 js/battle.js        scène de combat 2D (canvas)
 js/app.js           logique et interface
+js/dice.js          plateau de dés et animation
 js/board.js         panneau d'affichage (post-it déplaçables)
 js/lexique.js       onglet Lexique (recherche, filtres, ajout au jeu)
 js/persos.js        création de personnage, fiche à onglets, sorts, réclamation
