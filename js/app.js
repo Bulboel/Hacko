@@ -75,7 +75,7 @@ function renderInto(el, build) {
 document.addEventListener("focusout", () => setTimeout(() => { if (pendingRender && code) { pendingRender = false; render(); } }, 60));
 
 /* ---------- Accueil : deux tables fixes ---------- */
-const TABLES = [{ code: "REVE", name: "La compagnie du rêve" }, { code: "TABLE2", name: "Seconde table" }];
+const TABLES = [{ code: "REVE", name: "La compagnie du rêve" }, { code: "TABLE2", name: "Le trio infernal" }];
 const store = {
   get(k, d = null) { try { const v = localStorage.getItem("hacko." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("hacko." + k, JSON.stringify(v)); } catch (e) {} },

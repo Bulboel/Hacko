@@ -27,7 +27,7 @@ Sans configuration, la synchro marche entre **les onglets du même navigateur** 
 6. Authentication → Settings → **Domaines autorisés** : ajoute ton domaine GitHub Pages (`<utilisateur>.github.io`).
 
 ### Utilisation
-Il y a **deux tables fixes** : *La compagnie du rêve* et *Seconde table* (le MJ peut les renommer en cliquant sur le nom en haut). Pas de code à saisir.
+Il y a **deux tables fixes** : *La compagnie du rêve* et *Le trio infernal* (le MJ peut les renommer en cliquant sur le nom en haut). Pas de code à saisir.
 
 **MJ** : sur la page d'accueil, clique sur *Je suis le MJ* sous ta table, puis *Créer mon compte MJ* (e-mail + mot de passe, une seule fois) : ce compte te rend ta table sur n'importe quel appareil. Ensuite, dans *Personnages* : **📥 Personnages enregistrés** ajoute d'un clic les fiches déjà prêtes (Bolduc, Eberien, Jhimm).
 
