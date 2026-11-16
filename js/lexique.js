@@ -2,8 +2,8 @@
 /* Lexique : recherche instantanée dans le SRD 5.1 (OGL) — monstres, objets, objets magiques, sorts, classes, races, règles.
    Données générées par tools/build-lexique.py dans data/lexique-*.js (chargées à la première ouverture). */
 (function () {
-  const FILES = ["mon", "eq", "mag", "spl", "cls", "rac", "reg"];
-  const CATS = [["all", "Tout", "📚"], ["perso", "Notre monde", "⭐"], ["mon", "Monstres", "👹"], ["eq", "Objets", "🎒"], ["mag", "Objets magiques", "💎"], ["spl", "Sorts", "✨"], ["cls", "Classes", "🛡️"], ["rac", "Races", "🧝"], ["reg", "Règles & états", "📖"]];
+  const FILES = ["mon", "eq", "mag", "spl", "cls", "rac", "reg", "nof"];
+  const CATS = [["all", "Tout", "📚"], ["perso", "Notre monde", "⭐"], ["mon", "Monstres", "👹"], ["eq", "Objets", "🎒"], ["mag", "Objets magiques", "💎"], ["spl", "Sorts", "✨"], ["cls", "Classes", "🛡️"], ["rac", "Races", "🧝"], ["reg", "Règles & états", "📖"], ["nof", "Non officiel", "⚠️"]];
   const ICON = Object.fromEntries(CATS.map(c => [c[0], c[2]]));
   const TYPE_FR = { beast: "Bête", humanoid: "Humanoïde", dragon: "Dragon", monstrosity: "Monstruosité", fiend: "Fiélon", undead: "Mort-vivant", elemental: "Élémentaire", giant: "Géant", swarm: "Nuée", construct: "Créature artificielle", plant: "Plante", fey: "Fée", celestial: "Céleste", aberration: "Aberration", ooze: "Vase" };
   const CRS = [["", "—"], [0, "0"], [0.125, "1/8"], [0.25, "1/4"], [0.5, "1/2"], ...Array.from({ length: 30 }, (_, i) => [i + 1, String(i + 1)])];
@@ -21,7 +21,7 @@
     }))).then(() => {
       for (const k of FILES) for (const e of H.LEX[k]) {
         e._c = k; e._n = norm(e.n); e._a = norm(e.a || "");
-        e._h = norm([e.n, e.a, e.s, e.c, e.sc, (e.cl || []).join(" ")].join(" "));
+        e._h = norm([e.n, e.a, e.s, e.c, e.sc, (e.cl || []).join(" "), k === "nof" ? "non officiel hors srd " + (e.k || "") : ""].join(" "));
         all.push(e);
       }
       loaded = true; syncCustom(true);
@@ -34,6 +34,7 @@
     mon: () => [{ k: "t", label: "Type", opts: uniq("mon", "t", v => TYPE_FR[v] || v) }, { k: "cmin", label: "FP min", opts: CRS }, { k: "cmax", label: "FP max", opts: CRS }],
     eq: () => [{ k: "c", label: "Catégorie", opts: uniq("eq", "c") }, { k: "pmax", label: "Prix max", opts: [["", "Tous"], [100, "≤ 1 po"], [1000, "≤ 10 po"], [10000, "≤ 100 po"], [100000, "≤ 1 000 po"]] }],
     mag: () => [{ k: "r", label: "Rareté", opts: [["Commun", "Commun"], ["Peu commun", "Peu commun"], ["Rare", "Rare"], ["Très rare", "Très rare"], ["Légendaire", "Légendaire"], ["Artefact", "Artefact"], ["Variable", "Variable"]] }, { k: "c", label: "Catégorie", opts: uniq("mag", "c") }],
+    nof: () => [{ k: "k", label: "Genre", opts: [["race", "Races"], ["classe", "Classes"], ["monstre", "Monstres"]] }],
     perso: () => [{ k: "k", label: "Genre", opts: [["mon", "Monstres"], ["obj", "Objets"], ["lieu", "Villes & lieux"], ["pnj", "PNJ"], ["sort", "Sorts"], ["autre", "Autres"]] }],
     spl: () => [{ k: "lv", label: "Niveau", opts: [[0, "Tour de magie"], ...Array.from({ length: 9 }, (_, i) => [i + 1, "Niveau " + (i + 1)])] }, { k: "sc", label: "École", opts: uniq("spl", "sc") }, { k: "cl", label: "Classe", opts: [...new Set(all.filter(e => e._c === "spl").flatMap(e => e.cl))].sort().map(v => [v, v]) }]
   };
@@ -50,6 +51,7 @@
     if (cat === "mon") return (!has(F.t) || e.t === F.t) && (!has(F.cmin) || e.cr >= +F.cmin) && (!has(F.cmax) || e.cr <= +F.cmax);
     if (cat === "eq") return (!has(F.c) || e.c === F.c) && (!has(F.pmax) || e.p <= +F.pmax);
     if (cat === "mag") return (!has(F.r) || e.r === F.r) && (!has(F.c) || e.c === F.c);
+    if (cat === "nof") return !has(F.k) || e.k === F.k;
     if (cat === "perso") return !has(F.k) || e.kind === F.k;
     if (cat === "spl") return (!has(F.lv) || e.lv === +F.lv) && (!has(F.sc) || e.sc === F.sc) && (!has(F.cl) || e.cl.includes(F.cl));
     return true;
@@ -86,6 +88,7 @@
     if (e._c === "eq") return e.f[0][1];
     if (e._c === "mag") return e.r;
     if (e._c === "spl") return e.lv ? "Niv. " + e.lv : "Tour";
+    if (e._c === "nof") return e.k === "monstre" ? `FP ${e.cr} · ${e.x.hp} PV` : e.k === "race" ? "Race" : "Classe";
     if (e._c === "perso") return e.raw.an ? "par " + e.raw.an : "";
     return "";
   }
@@ -163,21 +166,23 @@
     const root = h("div", { class: "ldet" },
       h("div", { class: "ltitle" }, h("h3", {}, (e.ic || ICON[e._c]) + " " + e.n), e.a && norm(e.a) !== norm(e.n) && e._c !== "eq" ? h("span", { class: "muted" }, e.a) : null),
       h("div", { class: "muted lsub" }, e.s),
+      e._c === "nof" ? h("div", { class: "warnbox" }, h("b", {}, "⚠️ Contenu non officiel (hors SRD). "), "Résumé et adaptation écrits pour Hacko avec nos propres mots, d'après des contenus connus du jeu : ce n'est pas le texte des livres. Les chiffres sont indicatifs ; vérifie-les dans le livre d'origine (voir « Source ») et demande l'accord du MJ avant d'utiliser une race, une classe ou un monstre non officiel.") : null,
       hasFr ? h("label", { class: "inl small enbox" }, h("input", { type: "checkbox", checked: showEnglish(), onchange: ev => { store.set("lex.en", ev.target.checked); root.replaceWith(detail(e)); } }), " 🇬🇧 Afficher l'original anglais sous chaque paragraphe") : null,
       e.img ? h("img", { class: "lexpic", src: e.img, alt: "", onclick: () => H.Board.lightbox(e.img, e.n) }) : null,
       e.f && e.f.length ? h("dl", { class: "lf-grid" }, e.f.map(([k, v]) => [h("dt", {}, k), h("dd", {}, String(v))])) : null,
       e.d0 ? [h("p", { class: "muted" }, h("i", {}, e.d0f || e.d0)), en && e.d0f ? h("div", { class: "en" }, h("p", {}, h("i", {}, e.d0))) : null] : null,
       paras(e.df || e.d, e.d, en),
-      (e.sec || []).map(([t, ps], i) => h("details", { open: e._c === "mon" || (e._c === "rac") }, h("summary", {}, t), paras(e.secf ? e.secf[i][1] : ps, ps, en))),
+      (e.sec || []).map(([t, ps], i) => h("details", { open: e._c === "mon" || e._c === "rac" || e._c === "nof" }, h("summary", {}, t), paras(e.secf ? e.secf[i][1] : ps, ps, en))),
       actions(e));
     return root;
   }
 
   function actions(e) {
     if (e._c === "perso") return H.LexPerso.actions(e);
-    if (!["mon", "eq", "mag", "spl"].includes(e._c) || !H.state || !H.state.meta) return null;
+    if (!["mon", "eq", "mag", "spl", "nof"].includes(e._c) || !H.state || !H.state.meta) return null;
+    if (e._c === "nof" && !e.x) return null;
     const box = h("div", { class: "lexact" });
-    if (e._c === "mon") {
+    if (e._c === "mon" || e._c === "nof") {
       if (!H.isGM()) return h("p", { class: "muted small" }, "Seul le MJ peut ajouter des monstres au combat.");
       const n = h("input", { type: "number", value: 1, min: 1, max: 12, style: "width:4.5em" });
       box.append(h("label", { class: "inl" }, "Quantité", n), h("button", { class: "btn gold", onclick: () => {

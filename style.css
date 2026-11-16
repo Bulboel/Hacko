@@ -264,3 +264,4 @@ table.lt{border-collapse:collapse;margin:8px 0;font-size:13px;width:100%}
 table.lt th{background:#0a1052;color:var(--gold);text-align:left}
 table.lt th,table.lt td{border:1px solid #3a4cc0;padding:4px 8px;vertical-align:top}
 .ldet{overflow-wrap:anywhere}
+.warnbox{background:#4a3a10;border:2px solid var(--gold);border-radius:10px;padding:8px 12px;margin:6px 0 10px;font-size:13px;line-height:1.4;color:#ffe9a8}
