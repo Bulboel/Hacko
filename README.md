@@ -47,7 +47,7 @@ Il y a **deux tables fixes** : *La compagnie du rêve* et *Le trio infernal* (le
 - Les deux tables ont des adresses fixes : quiconque connaît l'adresse du site peut entrer comme joueur. C'est pensé pour un groupe d'amis ; ne mets rien de sensible dedans.
 
 ## Données du lexique
-Source : **SRD 5.1** sous Open Game License 1.0a, via [5e-bits/5e-database](https://github.com/5e-bits/5e-database) (MIT). Sorts, objets, classes, races et règles sont en français ; le SRD n'a pas de monstres ni d'objets magiques en français : leurs noms et caractéristiques sont traduits, les textes des capacités restent en anglais. Pour régénérer : `python3 tools/build-lexique.py <5e-database>/src/2014 data/`.
+Source : **SRD 5.1** sous Open Game License 1.0a, via [5e-bits/5e-database](https://github.com/5e-bits/5e-database) (MIT). Sorts, objets, classes, races et règles viennent de la version française du SRD. Le SRD n'a pas de monstres ni d'objets magiques en français : ils ont été **traduits pour Hacko** (noms, caractéristiques, capacités, actions, tableaux — environ 2 000 paragraphes), l'**original anglais restant affichable** sous chaque paragraphe. Les lignes d'attaque sont traduites automatiquement (`tools/traduction/auto.py`), le reste à la main (`tools/traduction/modeles-fr.json`). Pour régénérer : `python3 tools/build-lexique.py <5e-database>/src/2014 data/`.
 
 ## Structure
 ```

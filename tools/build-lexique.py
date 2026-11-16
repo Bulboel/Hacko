@@ -5,9 +5,18 @@ import json, re, sys, os
 SRC, OUT = sys.argv[1], sys.argv[2]
 L = lambda lang, f: json.load(open(f"{SRC}/{lang}/5e-SRD-{f}.json"))
 def ft2m(s):
-    return re.sub(r"(\d+)\s*ft\.?", lambda m: f"{round(int(m.group(1))*0.3*2)/2:g} m".replace(".", ","), str(s))
+    return re.sub(r"(\d+)\s*ft\.?", lambda m: f"{round(int(m.group(1))*0.3, 1):g} m".replace(".", ","), str(s))
+# quelques phrases restées en anglais dans la source française du SRD
+FIXES = {
+    "The special component for this version of the spell is a large, transparent gemstone, such as a corundum, diamond, or ruby.": "La composante spéciale de cette version du sort est une grande gemme transparente, comme un corindon, un diamant ou un rubis.",
+    "The creature is limited in the actions it can perform by the nature of its new form, and it can't speak, cast spells, or take any other action that requires hands or speech unless its new form is capable of such actions.": "La créature est limitée dans les actions qu'elle peut effectuer par la nature de sa nouvelle forme, et elle ne peut ni parler, ni lancer de sorts, ni effectuer d'autre action nécessitant des mains ou la parole, sauf si sa nouvelle forme en est capable.",
+    "Once you regain spell slots with this feature, you must finish a long rest before you can do so again.": "Une fois que vous avez regagné des emplacements de sort grâce à cette capacité, vous devez terminer un repos long avant de pouvoir le refaire.",
+    "Frigga, goddess of birth and fertility    | N         | Vie, Lumière       | Cat": "Frigga, déesse de la naissance et de la fertilité    | N         | Vie, Lumière       | Chat",
+}
 def js(var, data):
-    open(f"{OUT}/lexique-{var}.js", "w").write(f"window.H=window.H||{{}};H.LEX=H.LEX||{{}};H.LEX.{var}=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    txt = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    for a, b in FIXES.items(): txt = txt.replace(a, b)
+    open(f"{OUT}/lexique-{var}.js", "w").write(f"window.H=window.H||{{}};H.LEX=H.LEX||{{}};H.LEX.{var}=" + txt + ";\n")
     print(var, len(data), os.path.getsize(f"{OUT}/lexique-{var}.js") // 1024, "Ko")
 
 dmg_fr = {d["index"]: d["name"] for d in L("fr-FR", "Damage-Types")}
@@ -41,6 +50,31 @@ for e in L("fr-FR", "Equipment"):
     eq.append({"n": e["name"], "a": e["index"].replace("-", " "), "s": sub, "c": cat, "f": f, "d": e.get("desc", []), "p": cp, "w": e.get("weight", 0)})
 js("eq", eq)
 
+# ---------------- Traduction française (monstres, objets magiques) ----------------
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "traduction"))
+import templ as T, auto as A, names as NM
+TRAD = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "traduction", "modeles-fr.json")))
+MISSING = []
+def frtext(x):
+    a = A.auto(x, A.ATTN)
+    if a: return a
+    t, ft, nums = T.split(x)
+    f = TRAD.get(t)
+    if f is None: MISSING.append(x); return x
+    return T.render(f, ft, nums)
+LANG = {"Common":"commun","Dwarvish":"nain","Elvish":"elfique","Giant":"géant","Gnomish":"gnome","Goblin":"gobelin","Halfling":"halfelin","Orc":"orc","Abyssal":"abyssal","Celestial":"céleste","Draconic":"draconique","Deep Speech":"profond","Infernal":"infernal","Primordial":"primordial","Sylvan":"sylvestre","Undercommon":"commun des profondeurs","Aquan":"aquatique","Auran":"aérien","Ignan":"igné","Terran":"terreux","Gnoll":"gnoll","Sahuagin":"sahuagin","Troglodyte":"troglodyte","Hook Horror":"horreur à crochets","Void Speech":"langage du Vide","Thieves' cant":"argot des voleurs","Druidic":"druidique"}
+def lang_fr(s):
+    s = s or ""
+    s = re.sub(r"(\d+) ?ft\.?", lambda m: ft2m(m.group(0)), s)
+    for e, f in [("any one language (usually Common)", "une langue au choix (généralement le commun)"), ("any four languages", "quatre langues au choix"), ("understands all languages it knew in life but can't speak", "comprend toutes les langues qu'il connaissait de son vivant mais ne parle pas"), ("the languages it knew in life", "les langues qu'il connaissait de son vivant"), ("telepathy", "télépathie"), (" and ", " et "), ("up to", "jusqu'à")]: s = s.replace(e, f)
+    NUM = {"one": "une", "two": "deux", "three": "trois", "four": "quatre", "five": "cinq", "six": "six"}
+    s = re.sub(r"any (one|two|three|four|five|six) languages?", lambda m: NUM[m.group(1)] + " langue" + ("s" if m.group(1) != "one" else "") + " au choix", s)
+    s = re.sub(r"up to (one|two|three|four|five|six) other languages", lambda m: "jusqu'à " + NUM[m.group(1)] + " autres langues", s)
+    s = re.sub(r"understands (.+?) but (?:can't|doesn't) speak(?: it)?", lambda m: "comprend " + m.group(1) + " mais ne parle pas", s)
+    for e, f in [("commands given in any language", "les ordres donnés dans n'importe quelle langue"), ("any languages it knew in life", "toutes les langues qu'il connaissait de son vivant"), ("the languages of its creator", "les langues de son créateur"), ("(works only with creatures that understand Abyssal)", "(ne fonctionne qu'avec les créatures qui comprennent l'abyssal)"), ("any language", "n'importe quelle langue")]: s = s.replace(e, f)
+    for e, f in LANG.items(): s = re.sub(rf"\b{re.escape(e)}\b", f, s)
+    return s.strip()
+
 # ---------------- Objets magiques (EN, termes FR) ----------------
 RAR = {"Common": "Commun", "Uncommon": "Peu commun", "Rare": "Rare", "Very Rare": "Très rare", "Legendary": "Légendaire", "Varies": "Variable", "Artifact": "Artefact"}
 RORD = {"Commun": 1, "Peu commun": 2, "Rare": 3, "Très rare": 4, "Légendaire": 5, "Artefact": 6, "Variable": 0}
@@ -49,7 +83,8 @@ mag = []
 for m in L("en", "Magic-Items"):
     r = RAR.get(m["rarity"]["name"], m["rarity"]["name"]); cat = CATM.get(m["equipment_category"]["name"], m["equipment_category"]["name"])
     d = m["desc"]
-    mag.append({"n": m["name"], "s": f"{cat} · {r}", "c": cat, "r": r, "ro": RORD.get(r, 0), "f": [["Rareté", r], ["Catégorie", cat]], "d": d[1:] if len(d) > 1 else d, "d0": d[0] if len(d) > 1 else ""})
+    dd, d0 = (d[1:] if len(d) > 1 else d), (d[0] if len(d) > 1 else "")
+    mag.append({"n": NM.item_name(m["name"]), "a": m["name"], "s": f"{cat} · {r}", "c": cat, "r": r, "ro": RORD.get(r, 0), "f": [["Rareté", r], ["Catégorie", cat]], "d": dd, "d0": d0, "df": [frtext(p) for p in dd], "d0f": frtext(d0) if d0 else ""})
 js("mag", mag)
 
 # ---------------- Sorts (FR) ----------------
@@ -74,7 +109,7 @@ for c in L("fr-FR", "Classes"):
     secs = [[f"Niveau {lv}", [x for t, dd in items for x in ([f"▸ {t}"] + dd)]] for lv, items in sorted(sec.items())]
     f = [["Dé de vie", f"d{c['hit_die']}"], ["Sauvegardes", ", ".join(s["name"] for s in c["saving_throws"])], ["Maîtrises", ", ".join(p["name"] for p in c["proficiencies"])],
          ["Sous-classes", ", ".join(s["name"] for s in c.get("subclasses", [])) or "—"]] + [["Compétences", p["desc"]] for p in c.get("proficiency_choices", [])[:1]]
-    cls.append({"n": c["name"], "a": c["index"], "s": f"Classe · d{c['hit_die']}", "f": f, "sec": secs, "d": []})
+    cls.append({"n": {"fighter": "Guerrier"}.get(c["index"], c["name"]), "a": c["index"], "s": f"Classe · d{c['hit_die']}", "f": f, "sec": secs, "d": []})
 rac = []
 for r in L("fr-FR", "Races"):
     ab = ", ".join(f"{a['ability_score']['name']} +{a['bonus']}" for a in r.get("ability_bonuses", []))
@@ -149,7 +184,7 @@ for m in L("en", "Monsters"):
     al = m["alignment"]
     for a, b in ALIGN: al = al.replace(a, b)
     t = TYPE.get(m["type"], "nuée de bêtes TP" if m["type"].startswith("swarm") else m["type"]) + (f" ({m['subtype']})" if m.get("subtype") else "")
-    fn = fr_name(m["name"])
+    fn = NM.MON.get(m["name"]) or fr_name(m["name"])
     f = [["Classe d'armure", f"{ac}" + (f" ({at})" if at else "")], ["Points de vie", f"{m['hit_points']} ({m['hit_points_roll']})"],
          ["Vitesse", ", ".join(f"{SPD.get(k, k)} {ft2m(v)}" for k, v in m["speed"].items() if k != "hover")],
          ["Caractéristiques", " · ".join(f"{ab} {m[k]} ({sg(mod(m[k]))})" for ab, k in [("FOR", "strength"), ("DEX", "dexterity"), ("CON", "constitution"), ("INT", "intelligence"), ("SAG", "wisdom"), ("CHA", "charisma")])]]
@@ -161,14 +196,22 @@ for m in L("en", "Monsters"):
         if m.get(k): f.append([lab, dmgfr("; ".join(m[k]))])
     if m.get("condition_immunities"): f.append(["Immunités (états)", ", ".join(cond_fr.get(c["index"], c["name"]).lower() for c in m["condition_immunities"])])
     f.append(["Sens", ", ".join(f"{SENSE.get(k, k)} {ft2m(v)}" for k, v in m["senses"].items())])
-    f.append(["Langues", m["languages"] or "—"])
+    f.append(["Langues", lang_fr(m["languages"]) or "—"])
     f.append(["FP", f"{crs(m['challenge_rating'])} ({m['xp']} PX)"])
     sec = []
     if m.get("special_abilities"): sec.append(["Capacités spéciales", [f"▸ {a['name']}. {a['desc']}" for a in m["special_abilities"]]])
     if m.get("actions"): sec.append(["Actions", [f"▸ {a['name']}. {a['desc']}" for a in m["actions"]]])
     if m.get("reactions"): sec.append(["Réactions", [f"▸ {a['name']}. {a['desc']}" for a in m["reactions"]]])
     if m.get("legendary_actions"): sec.append(["Actions légendaires", [f"▸ {a['name']}. {a['desc']}" for a in m["legendary_actions"]]])
-    acts = [{"n": a["name"], "d": a["desc"][:140]} for a in m.get("actions", []) if a["name"] != "Multiattack"][:6]
-    mon.append({"n": fn, "a": m["name"], "s": f"{SIZE.get(m['size'], m['size'])} · {t} · {al}", "t": m["type"].split(" ")[0], "cr": m["challenge_rating"], "hp": m["hit_points"], "ac": ac, "f": f, "sec": sec,
+    secf = [[t, [frtext(p) for p in ps]] for t, ps in sec]
+    acts = []
+    for st, ps in secf:
+        if st == "Actions":
+            for p in ps:
+                mm = re.match(r"^▸ (.+?)\. (.*)$", p, re.S)
+                if mm and not mm.group(1).startswith("Attaques multiples"): acts.append({"n": mm.group(1)[:40], "d": mm.group(2)[:140]})
+    acts = acts[:6]
+    mon.append({"n": fn, "a": m["name"], "s": f"{SIZE.get(m['size'], m['size'])} · {t} · {al}", "t": m["type"].split(" ")[0], "cr": m["challenge_rating"], "hp": m["hit_points"], "ac": ac, "f": f, "sec": sec, "secf": secf,
                 "x": {"hp": m["hit_points"], "ac": ac, "b": mod(m["dexterity"]), "k": kind(m), "acts": acts}})
 js("mon", mon)
+print("non traduits :", len(MISSING)); [print("  ", x[:90]) for x in MISSING[:10]]

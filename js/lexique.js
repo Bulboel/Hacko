@@ -123,26 +123,54 @@
   }
 
   /* ---------- Fiche détaillée ---------- */
-  function para(t) {
+  /* texte enrichi : **gras**, ***gras italique***, *italique* ; tableaux « | a | b | » ; puces « - » et « * » */
+  function inline(t) {
+    const out = [], re = /\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*([^*\s][^*]*?)\*/g; let i = 0, m;
+    while ((m = re.exec(t))) { if (m.index > i) out.push(t.slice(i, m.index)); out.push(m[1] ? h("b", {}, h("i", {}, m[1])) : m[2] ? h("b", {}, m[2]) : h("i", {}, m[3])); i = re.lastIndex; }
+    if (i < t.length) out.push(t.slice(i)); return out;
+  }
+  function rich(t) {
     if (t.startsWith("▸ ")) {
       const s = t.slice(2), m = s.match(/^(.{1,70}?\.)\s+([\s\S]*)$/);
-      return m ? h("p", {}, h("b", {}, m[1] + " "), m[2]) : h("p", {}, h("b", {}, s));
+      return m ? h("p", {}, h("b", {}, m[1] + " "), inline(m[2])) : h("p", {}, h("b", {}, s));
     }
-    if (t.startsWith("- ")) return h("p", { class: "bul" }, "• " + t.slice(2));
-    return h("p", {}, t);
+    if (t.startsWith("- ")) return h("p", { class: "bul" }, "• ", inline(t.slice(2)));
+    if (t.startsWith("* ")) return h("p", { class: "bul" }, "• ", inline(t.slice(2)));
+    return h("p", {}, inline(t));
   }
+  function table(lines) {
+    const rows = lines.filter(l => !/^\|[-:| ]+\|?$/.test(l.trim())).map(l => l.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim()));
+    return h("table", { class: "lt" }, h("thead", {}, h("tr", {}, rows[0].map(c => h("th", {}, inline(c))))), h("tbody", {}, rows.slice(1).map(r => h("tr", {}, r.map(c => h("td", {}, inline(c)))))));
+  }
+  /* fr = texte principal ; en = original (affiché dessous si showEn) */
+  function paras(fr, en, showEn) {
+    const out = []; let i = 0;
+    fr = (fr || []).filter(x => x !== undefined && x !== null && x !== "");
+    en = en || fr;
+    while (i < fr.length) {
+      if (fr[i].startsWith("|")) {
+        let j = i; while (j < fr.length && fr[j].startsWith("|")) j++;
+        out.push(table(fr.slice(i, j))); if (showEn) out.push(h("div", { class: "en" }, table(en.slice(i, j))));
+        i = j;
+      } else { out.push(rich(fr[i])); if (showEn && en[i] && en[i] !== fr[i]) out.push(h("div", { class: "en" }, rich(en[i]))); i++; }
+    }
+    return out;
+  }
+  const showEnglish = () => store.get("lex.en", false);
   function detail(e) {
-    return h("div", { class: "ldet" },
+    const hasFr = !!(e.secf || e.df);
+    const en = hasFr && showEnglish();
+    const root = h("div", { class: "ldet" },
       h("div", { class: "ltitle" }, h("h3", {}, (e.ic || ICON[e._c]) + " " + e.n), e.a && norm(e.a) !== norm(e.n) && e._c !== "eq" ? h("span", { class: "muted" }, e.a) : null),
       h("div", { class: "muted lsub" }, e.s),
+      hasFr ? h("label", { class: "inl small enbox" }, h("input", { type: "checkbox", checked: showEnglish(), onchange: ev => { store.set("lex.en", ev.target.checked); root.replaceWith(detail(e)); } }), " 🇬🇧 Afficher l'original anglais sous chaque paragraphe") : null,
       e.img ? h("img", { class: "lexpic", src: e.img, alt: "", onclick: () => H.Board.lightbox(e.img, e.n) }) : null,
       e.f && e.f.length ? h("dl", { class: "lf-grid" }, e.f.map(([k, v]) => [h("dt", {}, k), h("dd", {}, String(v))])) : null,
-      e.d0 ? h("p", { class: "muted" }, h("i", {}, e.d0)) : null,
-      (e.d || []).filter(Boolean).map(para),
-      (e.sec || []).map(([t, ps], i) => h("details", { open: e._c === "mon" || (e._c === "rac") }, h("summary", {}, t), ps.map(para))),
-      e._c === "mon" ? h("p", { class: "muted small" }, "Texte des capacités et actions en anglais (le SRD n'a pas de version française des monstres).") : null,
-      e._c === "mag" ? h("p", { class: "muted small" }, "Description en anglais (le SRD n'a pas de version française des objets magiques).") : null,
+      e.d0 ? [h("p", { class: "muted" }, h("i", {}, e.d0f || e.d0)), en && e.d0f ? h("div", { class: "en" }, h("p", {}, h("i", {}, e.d0))) : null] : null,
+      paras(e.df || e.d, e.d, en),
+      (e.sec || []).map(([t, ps], i) => h("details", { open: e._c === "mon" || (e._c === "rac") }, h("summary", {}, t), paras(e.secf ? e.secf[i][1] : ps, ps, en))),
       actions(e));
+    return root;
   }
 
   function actions(e) {
