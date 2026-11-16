@@ -34,6 +34,15 @@ window.H = window.H || {};
       async init() {},
       async peek(c) { try { return (JSON.parse(localStorage.getItem("hacko.room." + c) || "{}")).meta || null; } catch (e) { return null; } },
       async signInGM() { return uid; },
+      prepare(c) { code = c; },
+      async tryMember(c, u, data, key) {
+        const s = JSON.parse(localStorage.getItem(this.k(c)) || "{}"), meta = s.meta;
+        if (meta && meta.q && meta.gm !== u && !(s.gates && s.gates[key])) return { ok: false };
+        s.members = s.members || {}; s.members[u] = { ...data, key: key || null }; if (!key) delete s.members[u].key;
+        localStorage.setItem(this.k(c), JSON.stringify(s)); return { ok: true };
+      },
+      k: c => "hacko.room." + c,
+      async setGate(c, hashes) { const s = JSON.parse(localStorage.getItem("hacko.room." + c) || "{}"); s.gates = hashes.length ? Object.fromEntries(hashes.map(h => [h, true])) : null; if (!s.gates) delete s.gates; localStorage.setItem("hacko.room." + c, JSON.stringify(s)); },
       async join(c, callback) {
         code = c; cb = callback;
         window.addEventListener("storage", onStorage);
@@ -75,6 +84,12 @@ window.H = window.H || {};
         db = firebase.database();
       },
       async peek(c) { try { return (await db.ref(`rooms/${c}/meta`).once("value")).val(); } catch (e) { return null; } },
+      prepare(c) { code = c; ref = db.ref("rooms/" + c); },
+      async tryMember(c, u, data, key) {
+        try { await db.ref(`rooms/${c}/members/${u}`).set({ ...data, key: key || null }); return { ok: true }; }
+        catch (e) { return { ok: false, err: e }; }
+      },
+      async setGate(c, hashes) { const o = {}; hashes.forEach(x => o[x] = true); await db.ref("gates/" + c).set(hashes.length ? o : null); },
       /* Compte e-mail du MJ : identité stable sur tous ses appareils. mode = "login" | "create" */
       async signInGM(email, password, mode) {
         const auth = firebase.auth();

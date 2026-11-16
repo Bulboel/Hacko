@@ -71,3 +71,7 @@ tools/              script de génération des données
 ```
 
 > L'ancien prototype narratif solo « Hackénia » reste consultable dans l'historique git (commit `eef0a9e`).
+
+## Question d'accès à une table
+
+Le MJ ouvre sa table, clique sur **🔒 Accès**, saisit une question et les réponses acceptées (séparées par des virgules, accents/majuscules ignorés). Les réponses ne sont jamais stockées en clair : seul un hachage SHA-256 (salé par le code de table) est écrit dans `gates/<TABLE>` (illisible par les joueurs). Un joueur ne peut créer sa fiche de membre que s'il fournit un hachage valide ; la réponse correcte est mémorisée sur son appareil. **Il faut republier `database.rules.json` dans Firebase** après cette mise à jour. Limite : la limite de 10 personnes reste vérifiée côté client.

@@ -2,14 +2,15 @@
   "rules": {
     "rooms": {
       "$room": {
-        ".read": "auth != null",
+        ".read": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()",
         "meta": {
           ".write": "auth != null && (!data.exists() || data.child('gm').val() === auth.uid)",
-          ".validate": "newData.child('gm').val() === (data.exists() ? data.child('gm').val() : auth.uid)"
+          ".validate": "newData.child('gm').val() === (data.exists() ? data.child('gm').val() : auth.uid)",
+          ".read": "auth != null"
         },
         "members": {
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid"
+            ".write": "auth != null && auth.uid === $uid && (root.child('rooms/' + $room + '/meta/gm').val() === auth.uid || !root.child('rooms/' + $room + '/meta/q').exists() || root.child('gates/' + $room + '/' + newData.child('key').val()).exists())"
           }
         },
         "chars": {
@@ -42,14 +43,25 @@
         "board": {
           "$bid": {
             ".write": "auth != null && (root.child('rooms/' + $room + '/meta/gm').val() === auth.uid || data.child('a').val() === auth.uid || (!data.exists() && newData.child('a').val() === auth.uid))",
-            "x": { ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()" },
-            "y": { ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()" },
-            "z": { ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()" }
+            "x": {
+              ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
+            },
+            "y": {
+              ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
+            },
+            "z": {
+              ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
+            }
           }
         },
         "log": {
           ".write": "auth != null && root.child('rooms/' + $room + '/members/' + auth.uid).exists()"
         }
+      }
+    },
+    "gates": {
+      "$room": {
+        ".write": "auth != null && root.child('rooms/' + $room + '/meta/gm').val() === auth.uid"
       }
     }
   }

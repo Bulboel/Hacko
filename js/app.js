@@ -84,27 +84,71 @@ const store = {
 
 async function ensureSync() { if (ready) return; await sync.init(); ready = true; }
 
+/* ---- SHA-256 compact (la question d'accès ne stocke jamais la réponse en clair) ---- */
+function sha256(str) {
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  const bytes = new TextEncoder().encode(str), l = bytes.length, n = ((l + 9 + 63) >> 6) << 6, m = new Uint8Array(n);
+  m.set(bytes); m[l] = 0x80; new DataView(m.buffer).setUint32(n - 4, l * 8, false);
+  const H0 = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19], w = new Uint32Array(64), dv = new DataView(m.buffer);
+  const rr = (x, k) => (x >>> k) | (x << (32 - k));
+  for (let o = 0; o < n; o += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4, false);
+    for (let i = 16; i < 64; i++) { const s0 = rr(w[i - 15], 7) ^ rr(w[i - 15], 18) ^ (w[i - 15] >>> 3), s1 = rr(w[i - 2], 17) ^ rr(w[i - 2], 19) ^ (w[i - 2] >>> 10); w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0; }
+    let [a, b, c, d, e, f, g, h] = H0;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0, t2 = ((rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    [a, b, c, d, e, f, g, h].forEach((v, i) => H0[i] = (H0[i] + v) | 0);
+  }
+  return H0.map(v => (v >>> 0).toString(16).padStart(8, "0")).join("");
+}
+const normAns = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+const gateKey = (code, ans) => sha256(`hacko|${code}|${normAns(ans)}`);
+
+function askGate(meta) {
+  return new Promise(res => {
+    const inp = h("input", { placeholder: "Ta réponse", autocomplete: "off", required: true }), msg = h("p", { class: "err" });
+    let done = false;
+    const form = h("form", { onsubmit: e => { e.preventDefault(); if (!inp.value.trim()) return; done = true; closeModal(); res(inp.value); } },
+      h("h3", {}, "🔒 Question d'accès"), h("p", {}, meta.q), h("label", {}, "Ta réponse", inp), msg, h("button", { class: "btn gold" }, "Entrer"));
+    openModal(form, "sm"); setTimeout(() => inp.focus(), 30);
+    const bd = $("#modal .backdrop"), x = $("#modal .x"); [bd, x].forEach(el => el && el.addEventListener("click", () => { if (!done) res(null); }));
+  });
+}
+
 /* o = { code, name, gm } — gm: ouvre/reprend la table en tant que MJ (déjà identifié) */
 async function enter(o) {
   const err = $("#land-err"); err.textContent = "";
   const fail = m => { try { sync.leave(); } catch (e) {} code = null; throw new Error(m); };
   try {
     await ensureSync();
-    code = o.code;
+    const c = o.code;
     S = {}; H.state = S;
-    await sync.join(code, onState);
-    const tbl = TABLES.find(t => t.code === code);
-    if (!S.meta) {
-      if (!o.gm) fail("Cette table n'est pas encore ouverte : le MJ doit d'abord l'ouvrir.");
-      // première ouverture : le MJ devient propriétaire de la table
-    } else if (o.gm && S.meta.gm !== uid()) fail("Cette table a déjà un MJ (un autre compte). Connecte-toi avec le compte MJ de cette table.");
-    const members = S.members || {}, mine = members[uid()];
-    if (!mine && Object.keys(members).length >= MAX_PLAYERS) fail("La table est pleine (10 personnes maximum).");
+    const meta = await sync.peek(c), tbl = TABLES.find(t => t.code === c);
+    if (!meta) { if (!o.gm) fail("Cette table n'est pas encore ouverte : le MJ doit d'abord l'ouvrir."); }
+    else if (o.gm && meta.gm !== uid()) fail("Cette table a déjà un MJ (un autre compte). Connecte-toi avec le compte MJ de cette table.");
+    code = c; sync.prepare(c);
     myName = (o.name || "").trim() || (o.gm ? "MJ" : "Joueur");
-    const color = (mine && mine.color) || PALETTE[Object.keys(members).length % PALETTE.length];
-    const upd = { ["members/" + uid()]: { name: myName, color, online: true, ts: (mine && mine.ts) || Date.now() } };
-    if (!S.meta) upd.meta = { name: tbl ? tbl.name : code, gm: uid(), created: Date.now() };
-    await write(upd);
+    if (!meta) await sync.update({ meta: { name: tbl ? tbl.name : c, gm: uid(), created: Date.now() } });
+    const isMJ = !!o.gm || !!(meta && meta.gm === uid());
+    const gated = !!(meta && meta.q) && !isMJ;
+    const color = PALETTE[[...uid()].reduce((a, ch) => a + ch.charCodeAt(0), 0) % PALETTE.length];
+    const data = { name: myName, color, online: true, ts: Date.now() };
+    let key = gated ? store.get("key:" + c) : null, r = await sync.tryMember(c, uid(), data, key);
+    if (!r.ok) {
+      if (!gated) fail("Accès refusé : " + ((r.err && r.err.message) || "règles Firebase à republier (database.rules.json)."));
+      for (let tries = 0; tries < 5 && !r.ok; tries++) {
+        const ans = await askGate(meta); if (ans === null) fail("Entrée annulée.");
+        key = gateKey(c, ans); r = await sync.tryMember(c, uid(), data, key);
+        if (!r.ok) toast("Ce n'est pas la bonne réponse, réessaie.", "err");
+      }
+      if (!r.ok) fail("Mauvaise réponse : l'accès à cette table est réservé aux amis du MJ.");
+      store.set("key:" + c, key);
+    }
+    await sync.join(c, onState);
+    const members = S.members || {};
+    if (Object.keys(members).length > MAX_PLAYERS && !isMJ) { await write({ ["members/" + uid()]: null }); fail("La table est pleine (10 personnes maximum)."); }
     store.set("session", { code, name: myName, gm: !!o.gm }); store.set("name", myName);
     history.replaceState(null, "", "#" + code);
     $("#landing").hidden = true; $("#app").hidden = false;
@@ -112,6 +156,23 @@ async function enter(o) {
     render();
     if (H.Perso) H.Perso.onEnter();
   } catch (e) { code = null; err.textContent = e.message || String(e); $("#landing").hidden = false; $("#app").hidden = true; }
+}
+
+/* MJ : définir la question d'accès de la table (les réponses acceptées sont stockées hachées, jamais en clair) */
+function openGate() {
+  const q = h("textarea", { rows: 3, maxlength: 300, placeholder: "Une question dont seuls tes amis connaissent la réponse" }, (S.meta && S.meta.q) || (code === "REVE" ? "Dans l'académie de magie de Vox, comment se nomme le directeur qui est aussi le sage de la ville ?" : ""));
+  const a = h("input", { placeholder: "Réponses acceptées, séparées par des virgules (ex. Garor, Guaror)" });
+  openModal(h("form", { onsubmit: async e => {
+    e.preventDefault();
+    const answers = a.value.split(",").map(x => x.trim()).filter(Boolean), question = q.value.trim();
+    if (question && !answers.length) return toast("Écris au moins une réponse acceptée.", "err");
+    const hashes = question ? [...new Set(answers.map(x => gateKey(code, x)))] : [];
+    await sync.setGate(code, hashes);
+    await write({ "meta/q": question || null });
+    toast(question ? "🔒 Question d'accès enregistrée" : "🔓 Accès libre rétabli", "good"); closeModal();
+  } }, h("h3", {}, "🔒 Question d'accès à la table"),
+  h("p", { class: "muted" }, "Seuls ceux qui répondent juste peuvent entrer. Accents et majuscules sont ignorés. Les réponses sont stockées chiffrées : tu ne pourras pas les relire, ressaisis-les pour les changer. Laisse la question vide pour rendre la table libre d'accès."),
+  h("label", {}, "Question", q), h("label", {}, "Réponses acceptées", a), h("button", { class: "btn gold" }, "Enregistrer")), "sm");
 }
 
 function askGM(t) {
@@ -142,7 +203,7 @@ async function renderTables() {
   box.replaceChildren(...TABLES.map(t => {
     const m = metas[t.code];
     return h("div", { class: "ffwin tcard" }, h("div", { class: "wt" }, "TABLE"), h("h2", {}, (m && m.name) || t.name),
-      h("p", { class: "muted" }, m ? "Table ouverte — prête à rejoindre" : "Pas encore ouverte par le MJ"),
+      h("p", { class: "muted" }, m ? (m.q ? "🔒 Table ouverte — question d'accès" : "Table ouverte — prête à rejoindre") : "Pas encore ouverte par le MJ"),
       h("button", { class: "btn gold big-btn", disabled: !m, onclick: () => joinTable(t) }, "⚔ Rejoindre"),
       h("button", { class: "btn ghost sm", onclick: () => askGM(t) }, "Je suis le MJ"));
   }));
@@ -226,6 +287,7 @@ function renderHeader() {
   const rn = $("#room-name"); rn.textContent = S.meta.name + (isGM() ? " ✎" : ""); rn.style.cursor = isGM() ? "pointer" : "default";
   rn.onclick = isGM() ? () => { const n = prompt("Nom de la table :", S.meta.name); if (n && n.trim()) write({ "meta/name": n.trim().slice(0, 40) }); } : null;
   $("#room-code").textContent = "🔗 Inviter";
+  $("#gate").hidden = !isGM();
   $("#role").textContent = isGM() ? "Maître du jeu" : "Joueur"; $("#role").className = "badge " + (isGM() ? "gm" : "");
   const ms = Object.entries(S.members || {});
   renderInto($("#members"), () => [ms.map(([id, m]) => h("span", { class: "mem" + (m.online === false ? " off" : ""), title: m.name + (S.meta.gm === id ? " (MJ)" : "") }, h("i", { style: "background:" + m.color }), S.meta.gm === id ? "👑 " : "", m.name)), h("span", { class: "count" }, `${ms.length}/${MAX_PLAYERS}`)]);
@@ -567,6 +629,7 @@ function init() {
   initLanding();
   $("#tabs").onclick = e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); };
   $("#leave").onclick = leave;
+  $("#gate").onclick = openGate;
   $("#help").onclick = () => openModal(h("div", {}, h("h3", {}, "❓ Comment ça marche ?"),
     h("p", {}, h("b", {}, "Les dés restent sur la table. "), "L'outil est le carnet de bord partagé : on lance ses vrais dés, et on note le résultat, les PV, les sorts utilisés."),
     h("ul", { class: "help" },
