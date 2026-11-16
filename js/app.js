@@ -160,7 +160,7 @@ async function enter(o) {
 
 /* MJ : définir la question d'accès de la table (les réponses acceptées sont stockées hachées, jamais en clair) */
 function openGate() {
-  const q = h("textarea", { rows: 3, maxlength: 300, placeholder: "Une question dont seuls tes amis connaissent la réponse" }, (S.meta && S.meta.q) || (code === "REVE" ? "Dans l'académie de magie de Vox, comment se nomme le directeur qui est aussi le sage de la ville ?" : ""));
+  const q = h("textarea", { rows: 3, maxlength: 300, placeholder: "Une question dont seuls tes amis connaissent la réponse" }, (S.meta && S.meta.q) || ({ REVE: "Dans l'académie de magie de Vox, comment se nomme le directeur qui est aussi le sage de la ville ?", TABLE2: "Comment s'appelle Mirahel dans la vraie vie ?" }[code] || ""));
   const a = h("input", { placeholder: "Réponses acceptées, séparées par des virgules (ex. Garor, Guaror)" });
   openModal(h("form", { onsubmit: async e => {
     e.preventDefault();
