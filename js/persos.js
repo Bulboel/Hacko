@@ -18,34 +18,44 @@
 
   /* ---------- Calculs ---------- */
   function limits(ci, lvl, st) {
-    const cl = G().cls[ci], L = ((G().lvl[ci] || {})[lvl]) || {};
+    const cl = CL()[ci], L = lvlRow(ci, lvl);
     if (!cl || !cl.ab) return { cantrips: 0, kind: "none", lim: 0, maxLv: 0, slots: [], ab: null };
     const m = mod(st[cl.ab]);
     let kind = "known", lim = L.k || 0;
-    if (ci === "paladin") { kind = "prep"; lim = Math.max(1, m + Math.floor(lvl / 2)); } else if (PREP[ci]) { kind = "prep"; lim = Math.max(1, m + lvl); }
+    if (cl.nof) { kind = cl.prep ? "prep" : "known"; lim = Math.max(1, m + Math.floor(lvl / 2)); } else if (ci === "paladin") { kind = "prep"; lim = Math.max(1, m + Math.floor(lvl / 2)); } else if (PREP[ci]) { kind = "prep"; lim = Math.max(1, m + lvl); }
     const slots = L.s || [];
     return { cantrips: L.c || 0, kind, lim, maxLv: slots.reduce((a, v, i) => v > 0 ? i + 1 : a, 0), slots, ab: cl.ab };
   }
-  const slotsObj = (ci, lvl, old = {}) => { const o = {}; (((G().lvl[ci] || {})[lvl] || {}).s || []).forEach((m, i) => { if (m > 0) o[i + 1] = { m, u: Math.min((old[i + 1] || {}).u || 0, m) }; }); return o; };
+  const slotsObj = (ci, lvl, old = {}) => { const o = {}; (lvlRow(ci, lvl).s || []).forEach((m, i) => { if (m > 0) o[i + 1] = { m, u: Math.min((old[i + 1] || {}).u || 0, m) }; }); return o; };
   const hpAvg = (hd, conm) => Math.floor(hd / 2) + 1 + conm;
-  const raceInfo = (ri, rsi) => { const r = G().rac[ri] || null, sr = rsi ? G().sub.find(x => x.i === rsi) : null; return { r, sr, ab: { ...(r ? r.ab : {}), ...(sr ? sr.ab : {}) }, tr: [...(r ? r.tr : []), ...(sr ? sr.tr : [])], label: sr ? sr.n : r ? r.n : "" }; };
+  const raceInfo = (ri, rsi) => { const r = RAC(ri), sr = rsi ? G().sub.find(x => x.i === rsi) : null; return { r, sr, ab: { ...(r ? r.ab : {}), ...(sr ? sr.ab : {}) }, tr: [...(r ? r.tr : []), ...(sr ? sr.tr : [])], label: sr ? sr.n : r ? r.n : "" }; };
   function grantFeats(ci, sci, ri, rsi, lvl, have = new Set()) {
     const out = {}, add = (n, d, s) => { if (have.has(norm(n))) return; have.add(norm(n)); out[sync.newId() + Object.keys(out).length] = { n, d: [].concat(d || []).join("\n"), s }; };
+    const ncl = CL()[ci]; if (ncl && ncl.nof) bullets(ncl.e, "Ce qui la caractérise").forEach(b => add(b.n, b.d, "Classe non officielle"));
     for (const f of G().feat) if (f.c === ci && f.l <= lvl && (!f.sc || f.sc === sci)) add(f.n, f.d, f.sc ? "Sous-classe niv. " + f.l : "Classe niv. " + f.l);
     const ri2 = raceInfo(ri, rsi); ri2.tr.forEach(t => add(t.n, t.d, "Race"));
     return out;
   }
-  const classOpts = () => Object.entries(G().cls).sort((a, b) => a[1].n.localeCompare(b[1].n, "fr"));
+  /* ---------- Contenus non officiels (races / classes ajoutées au lexique) ---------- */
+  const NOF = () => (H.LEX && H.LEX.nof) || [];
+  const nofRace = n => NOF().find(e => e.k === "race" && e.n === n);
+  const bullets = (e, sec) => ((e.sec || []).find(x => x[0] === sec) || [, []])[1].map(t => { const i = t.indexOf(" : "), j = t.indexOf(". "); const c = i > 0 && i < 50 ? i : j > 0 && j < 50 ? j : -1; return c > 0 ? { n: t.slice(0, c), d: t.slice(c + (t[c] === "." ? 2 : 3)) } : { n: t.slice(0, 45), d: t }; });
+  const nofClsMap = () => { const o = {}; NOF().filter(e => e.k === "classe").forEach(e => o["nof:" + e.n] = { n: e.n, hd: e.m.hd, sv: e.m.sv, ab: e.m.cab, half: !!e.m.half, prep: !!e.m.prep, skn: e.m.skn, skl: e.m.skl, sc: [], nof: true, e }); return o; };
+  const CL = () => ({ ...G().cls, ...nofClsMap() });
+  const RAC = ri => { if (ri && ri.startsWith("nof:")) { const e = nofRace(ri.slice(4)); return e ? { n: e.n, spd: e.m.spd, ab: e.m.ab, tr: bullets(e, "Traits typiques"), nof: true } : null; } return G().rac[ri] || null; };
+  const lvlRow = (ci, lvl) => { const cl = CL()[ci]; if (cl && cl.nof) { if (!cl.half) return {}; const r = ((G().lvl.wizard || {})[Math.ceil(lvl / 2)]) || {}; return { s: r.s || [], c: 2 + (lvl >= 10 ? 1 : 0) + (lvl >= 14 ? 1 : 0), k: 0 }; } return ((G().lvl[ci] || {})[lvl]) || {}; };
+  const classOpts = () => Object.entries(CL()).sort((a, b) => a[1].n.localeCompare(b[1].n, "fr"));
   const raceOpts = () => {
     const o = [];
     for (const [i, r] of Object.entries(G().rac)) { o.push({ v: "r:" + i, l: r.n }); }
+    NOF().filter(e => e.k === "race").forEach(e => o.push({ v: "r:nof:" + e.n, l: e.n + " (non officiel)" }));
     for (const s of G().sub) o.push({ v: "s:" + s.i, l: s.n });
     return o.sort((a, b) => a.l.localeCompare(b.l, "fr"));
   };
 
   /* ---------- Sélecteur de sorts ---------- */
   function spellPicker(o) {
-    const pool = spells().filter(s => !o.ci || s.ci.includes(o.ci)).sort((a, b) => a.lv - b.lv || a.n.localeCompare(b.n, "fr"));
+    const pool = spells().filter(s => !o.ci || String(o.ci).startsWith("nof:") || s.ci.includes(o.ci)).sort((a, b) => a.lv - b.lv || a.n.localeCompare(b.n, "fr"));
     let q = "", lv = "";
     const list = h("div", { class: "splist" }), head = h("div", { class: "sphead" });
     const count = lv0 => Object.values(o.sel).filter(x => lv0 ? x.lv === 0 : x.lv > 0).length;
@@ -82,12 +92,12 @@
     const box = h("div", { class: "wiz" }); let step = 0;
     const saved = store.get("saved", []);
     const steps = () => ["Identité", "Caractéristiques", ...(limits(w.ci, w.lvl, finalSt()).maxLv > 0 || limits(w.ci, w.lvl, finalSt()).cantrips ? ["Sorts"] : []), "Récapitulatif"];
-    const raceSel = () => { const [t, i] = w.race.split(":"); return t === "s" ? { ri: G().sub.find(x => x.i === i).r, rsi: i } : { ri: i, rsi: "" }; };
+    const raceSel = () => { const t = w.race[0], i = w.race.slice(2); return t === "s" ? { ri: G().sub.find(x => x.i === i).r, rsi: i } : { ri: i, rsi: "" }; };
     const finalSt = () => { const { ri, rsi } = raceSel(), b = w.applyRace ? raceInfo(ri, rsi).ab : {}; const o = {}; AB.forEach(([k]) => o[k] = (+w.st[k] || 10) + (b[k] || 0)); return o; };
     const derive = () => {
-      const { ri, rsi } = raceSel(), st = finalSt(), cl = G().cls[w.ci], con = mod(st.con), lvl = w.lvl;
+      const { ri, rsi } = raceSel(), st = finalSt(), cl = CL()[w.ci], con = mod(st.con), lvl = w.lvl;
       let hp = cl.hd + con + (lvl - 1) * hpAvg(cl.hd, con); if (rsi === "hill-dwarf") hp += lvl;
-      const spdFt = (G().rac[ri] || {}).spd || 30;
+      const spdFt = (RAC(ri) || {}).spd || 30;
       return { hp: Math.max(1, hp), ac: 10 + mod(st.dex), spd: `${(Math.round(spdFt * 0.3 * 2) / 2).toString().replace(".", ",")} m` };
     };
     const field = (label, el) => h("label", {}, label, el);
@@ -97,23 +107,24 @@
         step < names.length - 1 ? h("button", { type: "button", class: "btn gold", onclick: () => { if (step === 0 && !w.name.trim()) { toast("Donne un nom à ton personnage", "err"); return; } step++; draw(); } }, "Suivant →") : h("button", { type: "button", class: "btn gold", onclick: create }, "✔ Créer le personnage"));
       let body;
       if (cur === "Identité") {
-        const cl = G().cls[w.ci];
+        const cl = CL()[w.ci];
         body = [
           saved.length ? h("div", { class: "fxbox" }, h("b", {}, "💾 Reprendre un personnage enregistré :"), saved.map((s, i) => h("button", { type: "button", class: "chip", onclick: () => { importChar(s, opt); closeModal(); } }, s.name))) : null,
           field("Nom du personnage", h("input", { value: w.name, maxlength: 30, placeholder: "Aldren", oninput: e => w.name = e.target.value })),
           h("div", { class: "two" },
             field("Race", h("select", { onchange: e => { w.race = e.target.value; } }, raceOpts().map(o => h("option", { value: o.v, selected: o.v === w.race }, o.l)))),
-            field("Classe", h("select", { onchange: e => { w.ci = e.target.value; w.sci = ""; w.sel = {}; w._pick = null; w.skp = {}; draw(); } }, classOpts().map(([i, c]) => h("option", { value: i, selected: i === w.ci }, c.n))))),
+            field("Classe", h("select", { onchange: e => { w.ci = e.target.value; w.sci = ""; w.sel = {}; w._pick = null; w.skp = {}; draw(); } }, classOpts().map(([i, c]) => h("option", { value: i, selected: i === w.ci }, c.n + (c.nof ? " (non officiel)" : "")))))),
           h("div", { class: "two" },
             field("Sous-classe / voie", h("select", { onchange: e => { w.sci = e.target.value; draw(); } }, h("option", { value: "" }, "— aucune pour l'instant —"), cl.sc.map(s => h("option", { value: s.i, selected: s.i === w.sci }, s.n)), h("option", { value: "_x", selected: w.sci === "_x" }, "Autre (hors SRD)…"))),
             field("Niveau", h("input", { type: "number", min: 1, max: 20, value: w.lvl, onchange: e => { w.lvl = Math.max(1, Math.min(20, +e.target.value || 1)); w.sel = {}; w._pick = null; draw(); } }))),
           w.sci === "_x" ? field("Nom de la sous-classe", h("input", { value: w.sclsText, placeholder: "ex. Cercle de la lune", oninput: e => w.sclsText = e.target.value })) : null,
           opt.gm ? h("div", { class: "fxbox" }, h("label", { class: "inl" }, h("input", { type: "checkbox", checked: w.free, onchange: e => { w.free = e.target.checked; } }), " Un joueur pourra le réclamer en arrivant"),
             h("input", { placeholder: "Joueur prévu (facultatif)", value: w.forPlayer, oninput: e => w.forPlayer = e.target.value })) : null,
-          h("p", { class: "muted small" }, "Race et classe viennent du SRD 5.1. Pour une race ou une sous-classe hors SRD, choisis la plus proche : tu pourras tout modifier sur la fiche."),
+          (w.race.startsWith("r:nof:") || CL()[w.ci].nof) ? h("div", { class: "warnbox" }, "⚠️ Race ou classe non officielle : résumé et chiffres indicatifs (voir la fiche dans le Lexique). Vérifie avec le MJ avant de la jouer.") : null,
+          h("p", { class: "muted small" }, "Race et classe viennent du SRD 5.1 ou, quand c'est précisé, d'un contenu non officiel. Pour une race ou une sous-classe hors SRD, choisis la plus proche : tu pourras tout modifier sur la fiche."),
           h("label", { class: "inl" }, h("input", { type: "file", accept: ".json", onchange: async e => { const f = e.target.files[0]; if (!f) return; try { importChar(JSON.parse(await f.text()), opt); closeModal(); } catch (er) { toast("Fichier illisible", "err"); } } }), " 📂 Importer une fiche (.json)")];
       } else if (cur === "Caractéristiques") {
-        const { ri, rsi } = raceSel(), rb = raceInfo(ri, rsi).ab, st = finalSt(), cl = G().cls[w.ci];
+        const { ri, rsi } = raceSel(), rb = raceInfo(ri, rsi).ab, st = finalSt(), cl = CL()[w.ci];
         body = [
           h("p", { class: "muted" }, "Saisis tes valeurs de base (jets ou répartition). Les bonus de race sont ajoutés automatiquement."),
           h("div", { class: "stats6" }, AB.map(([k, ab, nm]) => h("label", { class: "fld" }, ab, h("input", { type: "number", min: 1, max: 30, value: w.st[k], onchange: e => { w.st[k] = +e.target.value || 10; draw(); } }),
@@ -125,14 +136,14 @@
           h("p", { class: "muted small" }, "Maîtrises de sauvegarde de ta classe : " + cl.sv.map(k => AB.find(a => a[0] === k)[1]).join(", "))];
       } else if (cur === "Sorts") {
         w._pick = w._pick || spellPicker({ ci: w.ci, sel: w.sel, cantrips: lim.cantrips, kind: lim.kind, lim: lim.lim, maxLv: lim.maxLv });
-        body = [h("p", { class: "muted" }, `Sorts disponibles pour ${G().cls[w.ci].n} niveau ${w.lvl} (emplacements : ${lim.slots.map((n, i) => n ? `niv.${i + 1}×${n}` : "").filter(Boolean).join(", ") || "aucun"}).`), w._pick];
+        body = [h("p", { class: "muted" }, `Sorts disponibles pour ${CL()[w.ci].n} niveau ${w.lvl} (emplacements : ${lim.slots.map((n, i) => n ? `niv.${i + 1}×${n}` : "").filter(Boolean).join(", ") || "aucun"}).`), w._pick];
       } else {
         const d = derive(); if (w.hp == null) w.hp = d.hp; if (w.ac == null) w.ac = d.ac; if (w.spd == null) w.spd = d.spd;
         const { ri, rsi } = raceSel(), fe = grantFeats(w.ci, w.sci === "_x" ? "" : w.sci, ri, rsi, w.lvl);
         w._fe = fe;
-        body = [h("h3", {}, `${w.name} — ${raceInfo(ri, rsi).label} ${G().cls[w.ci].n} niveau ${w.lvl}`),
+        body = [h("h3", {}, `${w.name} — ${raceInfo(ri, rsi).label} ${CL()[w.ci].n} niveau ${w.lvl}`),
           h("div", { class: "stats" }, field("PV max", h("input", { type: "number", value: w.hp, onchange: e => w.hp = +e.target.value || 1 })), field("CA", h("input", { type: "number", value: w.ac, onchange: e => w.ac = +e.target.value || 10 })), field("Vitesse", h("input", { value: w.spd, onchange: e => w.spd = e.target.value }))),
-          h("p", { class: "muted small" }, `Calculé : dé de vie d${G().cls[w.ci].hd}, modificateur de CON ${sg(mod(finalSt().con))}${raceSel().rsi === "hill-dwarf" ? ", ténacité naine" : ""}. Tu peux corriger les valeurs.`),
+          h("p", { class: "muted small" }, `Calculé : dé de vie d${CL()[w.ci].hd}, modificateur de CON ${sg(mod(finalSt().con))}${raceSel().rsi === "hill-dwarf" ? ", ténacité naine" : ""}. Tu peux corriger les valeurs.`),
           h("h4", {}, "Capacités et dons reçus automatiquement"),
           h("div", { class: "featchk" }, Object.entries(fe).map(([id, f]) => h("label", { class: "inl" }, h("input", { type: "checkbox", checked: !w.noFeat[f.n], onchange: e => { w.noFeat[f.n] = !e.target.checked; } }), h("b", {}, " " + f.n), h("small", { class: "muted" }, " · " + f.s)))),
           h("p", { class: "muted small" }, "Décoche ce qui ne s'applique pas (choix de dons, variantes). Tu pourras en ajouter d'autres sur la fiche.")];
@@ -140,7 +151,7 @@
       box.replaceChildren(h("div", { class: "wsteps" }, names.map((n, i) => h("span", { class: "ws" + (i === step ? " on" : i < step ? " done" : "") }, `${i + 1}. ${n}`))), ...[body].flat(Infinity).filter(Boolean), nav);
     };
     const create = () => {
-      const { ri, rsi } = raceSel(), st = finalSt(), cl = G().cls[w.ci], fe = grantFeats(w.ci, w.sci === "_x" ? "" : w.sci, ri, rsi, w.lvl), feats = {};
+      const { ri, rsi } = raceSel(), st = finalSt(), cl = CL()[w.ci], fe = grantFeats(w.ci, w.sci === "_x" ? "" : w.sci, ri, rsi, w.lvl), feats = {};
       Object.entries(fe).forEach(([id, f]) => { if (!w.noFeat[f.n]) feats[id] = f; });
       const lim = limits(w.ci, w.lvl, st), spl = {};
       Object.values(w.sel).forEach(s => { spl[sync.newId() + Object.keys(spl).length] = { n: s.n, lv: s.lv, i: s.i || null, p: s.lv > 0 && lim.kind === "prep" && w.ci !== "wizard" ? true : false }; });
@@ -261,7 +272,7 @@
   function sortsTab(x) {
     const { c, id, ed, set } = x;
     const ab = c.cast && c.cast.ab, m = ab ? mod((c.st || {})[ab]) : 0, pb = pbOf(c.lvl);
-    const prepKind = c.ci && PREP[c.ci];
+    const prepKind = c.ci && (PREP[c.ci] || (CL()[c.ci] || {}).prep);
     const spl = Object.entries(c.spl || {}).map(([k, s]) => ({ ...s, k })), slots = c.slots || {};
     const byLv = {}; spl.forEach(s => (byLv[s.lv] = byLv[s.lv] || []).push(s));
     const head = h("div", { class: "castbox" },
@@ -305,7 +316,7 @@
     const { c, id, set } = x; await ensure();
     if (!c.ci) return toast("Classe hors SRD : monte le niveau à la main.", "err");
     if ((c.lvl || 1) >= 20) return;
-    const L = (c.lvl || 1) + 1, cl = G().cls[c.ci], con = mod((c.st || {}).con), gain = Math.max(1, hpAvg(cl.hd, con) + (c.rsi === "hill-dwarf" ? 1 : 0));
+    const L = (c.lvl || 1) + 1, cl = CL()[c.ci], con = mod((c.st || {}).con), gain = Math.max(1, hpAvg(cl.hd, con) + (c.rsi === "hill-dwarf" ? 1 : 0));
     const have = new Set(Object.values(c.feats || {}).map(f => norm(f.n)));
     const add = {}; for (const f of G().feat) if (f.c === c.ci && f.l === L && (!f.sc || f.sc === c.sci)) if (!have.has(norm(f.n))) add[sync.newId() + Object.keys(add).length] = { n: f.n, d: [].concat(f.d).join("\n"), s: (f.sc ? "Sous-classe" : "Classe") + " niv. " + L };
     const upd = { [`chars/${id}/lvl`]: L, [`chars/${id}/maxHp`]: c.maxHp + gain, [`chars/${id}/hp`]: c.hp + gain };

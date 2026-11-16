@@ -108,7 +108,7 @@ window.H = window.H || {};
     } }
   };
 
-  const CLASS_TO_KIND = { "Guerrier": "guerrier", "Magicien": "mage", "Clerc": "clerc", "Rôdeur": "rodeur", "Roublard": "voleur", "Barde": "barde", "Paladin": "paladin", "Autre": "generic", "Druide": "rodeur", "Barbare": "guerrier", "Moine": "generic", "Ensorceleur": "mage", "Occultiste": "mage" };
+  const CLASS_TO_KIND = { "Guerrier": "guerrier", "Magicien": "mage", "Clerc": "clerc", "Rôdeur": "rodeur", "Roublard": "voleur", "Barde": "barde", "Paladin": "paladin", "Autre": "generic", "Druide": "rodeur", "Barbare": "guerrier", "Moine": "generic", "Ensorceleur": "mage", "Occultiste": "mage", "Artificier": "mage", "Alchimiste": "mage", "Mystique": "mage", "Chasseur de sang": "guerrier" };
 
   H.Sprites = {
     kinds: Object.keys(KINDS),

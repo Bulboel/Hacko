@@ -126,6 +126,18 @@ E += [
   ["Peuple serpent qui s'infiltre dans les cités en prenant forme humaine. Idéal pour intriguer et infiltrer."], "gobelin",
   [("Cimeterre", "attaque"), ("Arc court", "attaque à distance")]),
 ]
-for e in E: e["ic"] = e.get("ic")
+# données utilisées par l'assistant de création (indicatives)
+SK = ["arcanes", "histoire", "investigation", "medecine", "nature", "perception", "escamotage", "survie", "athletisme", "intuition", "intimidation", "acrobaties"]
+META = {
+ "Dhampire": {"ab": {}, "spd": 30}, "Aasimar": {"ab": {"cha": 2}, "spd": 30}, "Génasi": {"ab": {"con": 2}, "spd": 30}, "Goliath": {"ab": {"for": 2, "con": 1}, "spd": 30},
+ "Tabaxi": {"ab": {"dex": 2, "cha": 1}, "spd": 30}, "Kenku": {"ab": {"dex": 2, "sag": 1}, "spd": 30}, "Firbolg": {"ab": {"sag": 2, "for": 1}, "spd": 30},
+ "Triton": {"ab": {"for": 1, "con": 1, "cha": 1}, "spd": 30}, "Tortle": {"ab": {"for": 2, "sag": 1}, "spd": 30}, "Changeforme": {"ab": {"cha": 2}, "spd": 30}, "Forgé de guerre": {"ab": {"con": 2}, "spd": 30},
+ "Artificier": {"hd": 8, "sv": ["con", "int"], "cab": "int", "half": True, "prep": True, "skn": 2, "skl": ["arcanes", "histoire", "investigation", "medecine", "nature", "perception", "escamotage"]},
+ "Chasseur de sang": {"hd": 10, "sv": ["for", "int"], "cab": None, "skn": 2, "skl": ["acrobaties", "athletisme", "investigation", "intuition", "perception", "survie", "intimidation"]},
+ "Alchimiste": {"hd": 8, "sv": ["con", "int"], "cab": None, "skn": 2, "skl": ["arcanes", "investigation", "medecine", "nature", "perception", "escamotage"]},
+ "Mystique": {"hd": 8, "sv": ["int", "sag"], "cab": None, "skn": 2, "skl": ["arcanes", "histoire", "investigation", "intuition", "medecine", "nature", "religion", "perception"]}}
+for e in E:
+    e["ic"] = e.get("ic")
+    if e["k"] != "monstre": e["m"] = META[e["n"]]
 open(f"{OUT}/lexique-nof.js", "w").write("window.H=window.H||{};H.LEX=H.LEX||{};H.LEX.nof=" + json.dumps(E, ensure_ascii=False, separators=(",", ":")) + ";\n")
 print(len(E), "fiches non officielles")
